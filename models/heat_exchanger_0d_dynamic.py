@@ -8,12 +8,11 @@ class HeatExchangerDynamic(HeatExchanger):
     Lumped-capacitance model based the standard 0D IDAES heat exchanger.
 
     Usage:
-        add_dynamic_variables() and add_constraints() should be called before
-        the model is initialized and solved. It should then be solved with
-        steady-state boundary conditions. Then activate_dynamic_heat_eq()
-        should be called and transient boundary conditions specified.
-
-    This model is a work in progress and untested...
+        add_dynamic_variables() and add_dynamic_variable_constraints() should
+        be called before the model is initialized and solved. It should then
+        be solved with steady-state boundary conditions. Then
+        activate_dynamic_heat_eq() should be called and transient boundary
+        conditions specified.
     """
     def add_dynamic_variables(self):
         self.wall_temperature = Var(
@@ -42,17 +41,17 @@ class HeatExchangerDynamic(HeatExchanger):
             doc='Overall heat transfer coefficient from the hot side'
         )
         self.R_wall = Param(
-            initialize=1.,
+            initialize=0.,
             mutable=True,
             doc='Total thermal resistance of heat exchanger material'
         )
         self.R_fouling_cold_side = Param(
-            initialize=1.,
+            initialize=0.,
             mutable=True,
             doc='Total thermal resistance due to fouling on the cold side'
         )
         self.R_fouling_hot_side = Param(
-            initialize=1.,
+            initialize=0.,
             mutable=True,
             doc='Total thermal resistance due to fouling on the hot side'
         )
@@ -62,16 +61,17 @@ class HeatExchangerDynamic(HeatExchanger):
             doc='Overall heat transfer coefficient used to calculate wall temperature'
         )
 
-    def add_constraints(self):
-        @self.Constrant(
+    def add_dynamic_variable_constraints(self):
+        @self.Constraint(
             self.flowsheet().config.time,
             doc='Overall heat transfer coefficient for wall temperature equation'
         )
         def UA_hot_side_to_wall_eq(b, t):
             return b.UA_hot_side_to_wall[t] == 1 / (
-                    1 / b.UA_hot_side[t] + b.R_fouling_hot_side + 0.5 * b.R_wall)
+                    1 / b.UA_hot_side[t] + b.R_fouling_hot_side +
+                    0.5 * b.R_wall)
 
-        @self.Constrant(
+        @self.Constraint(
             self.flowsheet().config.time,
             doc='Overall heat transfer coefficient equation'
         )
@@ -80,26 +80,30 @@ class HeatExchangerDynamic(HeatExchanger):
                     1 / b.UA_hot_side[t] + b.R_fouling_hot_side + b.R_wall +
                     b.R_fouling_cold_side + 1 / b.UA_cold_side[t])
 
-        @self.Constrant(
+        @self.Constraint(
             self.flowsheet().config.time,
             doc='Overall heat transfer coefficient equation'
         )
         def wall_temperature_eq(b, t):
             # TODO: double check if the negative sign is right
-            return b.wall_temperature[t] == 0.5 * (b.hot_side.properties_in[t].temperature
-                                                   + b.hot_side.properties_out[t].temperature) \
-                   - b.UA_hot_side_to_wall[t] * b.hot_side.heat
+            return b.wall_temperature[t] == 0.5 * (
+                    b.hot_side.properties_in[t].temperature
+                    + b.hot_side.properties_out[t].temperature) \
+                   - b.hot_side.heat[t] / b.UA_hot_side_to_wall[t]
 
         @self.Constraint(
             self.flowsheet().time,
             doc='Unit heat balance equation with the added capacitance term'
         )
         def dynamic_heat_balance(b, t):
-            return b.hot_side.heat[t] + b.cold_side.heat[t] == b.dTdt[t] * b.heat_capacity
+            return 1e-3 * b.hot_side.heat[t] + 1e-3 * b.cold_side.heat[t] == \
+                   -b.dTdt[t] * b.heat_capacity * 1e-3
 
         self.dynamic_heat_balance.deactivate()
 
-
-def activate_dynamic_heat_eq(self):
-    self.unit_heat_balance.dectivate()
-    self.dynamic_heat_balance.activate()
+    def activate_dynamic_heat_eq(self):
+        t0 = self.flowsheet().config.time.first()
+        self.dTdt[:].value = 0
+        self.dTdt[t0].fix(0)
+        self.unit_heat_balance.deactivate()
+        self.dynamic_heat_balance.activate()
