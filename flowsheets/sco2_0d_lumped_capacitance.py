@@ -75,7 +75,7 @@ def make_model():
     m.fs.HE.add_dynamic_variable_constraints()
 
     m.discretizer = pe.TransformationFactory('dae.finite_difference')
-    m.discretizer.apply_to(m, nfe=200, wrt=m.fs.time, scheme="BACKWARD")
+    m.discretizer.apply_to(m, nfe=500, wrt=m.fs.time, scheme="BACKWARD")
 
     return set_boundary_conditions(m)
 
@@ -109,7 +109,7 @@ print(f'T wall: {t_wall}')
 m.fs.HE.activate_dynamic_heat_eq()
 for t in m.fs.time:
     if t > 60:
-        m.fs.HE.shell_inlet.temperature[t].fix(288.15 + 5)
+        m.fs.HE.shell_inlet.temperature[t].fix(288.15 + 10)
 
 solver.solve(m, tee=True)
 

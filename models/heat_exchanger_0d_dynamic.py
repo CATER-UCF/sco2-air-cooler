@@ -87,9 +87,9 @@ class HeatExchangerDynamic(HeatExchanger):
         def wall_temperature_eq(b, t):
             # TODO: double check if the negative sign is right
             return b.wall_temperature[t] == 0.5 * (
-                    b.hot_side.properties_in[t].temperature
-                    + b.hot_side.properties_out[t].temperature) \
-                   - b.hot_side.heat[t] / b.UA_hot_side_to_wall[t]
+                   b.hot_side.properties_in[t].temperature +
+                   b.hot_side.properties_out[t].temperature) \
+                   + b.hot_side.heat[t] / b.UA_hot_side_to_wall[t]
 
         @self.Constraint(
             self.flowsheet().time,
