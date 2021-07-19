@@ -145,7 +145,7 @@ def code_gen(n_passes, n_elements_per_pass, element_name='e',
 
 
 if __name__ == '__main__':
-    code = code_gen(8, 7)
+    code = code_gen(8, 7, mixing=False)
     print(code[0])
     print('')
     print(code[1])

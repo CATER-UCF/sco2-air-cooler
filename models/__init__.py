@@ -1,1 +1,1 @@
-from .heat_exchanger_0d_dynamic import HeatExchangerDynamic
+from .heat_exchanger_lumped_capacitance import HeatExchangerLumpedCapacitance

@@ -3,16 +3,23 @@ from pyomo.dae import DerivativeVar
 from idaes.generic_models.unit_models import HeatExchanger
 
 
-class HeatExchangerDynamic(HeatExchanger):
+class HeatExchangerLumpedCapacitance(HeatExchanger):
     """
     Lumped-capacitance model based the standard 0D IDAES heat exchanger.
 
-    Usage:
-        add_dynamic_variables() and add_dynamic_variable_constraints() should
-        be called before the model is initialized and solved. It should then
-        be solved with steady-state boundary conditions. Then
-        activate_dynamic_heat_eq() should be called and transient boundary
-        conditions specified.
+    Usage
+    -----
+    The unit model should be solved in sequence like so:
+        1. Add unit model to flowsheet
+        2. Call add_dynamic_variables()
+        3. Call add_dynamic_variable_constraints()
+        4. Apply discretization to the time domain
+        5. Set heat transfer parameters and apply steady-state boundary
+           condition constraints
+        6. Initialize and solve the model
+        7. Apply transient boundary condition constraints
+        8. Call activate_dynamic_heat_eq()
+        9. Solve the model
     """
     def add_dynamic_variables(self):
         self.wall_temperature = Var(
@@ -82,10 +89,9 @@ class HeatExchangerDynamic(HeatExchanger):
 
         @self.Constraint(
             self.flowsheet().config.time,
-            doc='Overall heat transfer coefficient equation'
+            doc='Wall temperature equation'
         )
         def wall_temperature_eq(b, t):
-            # TODO: double check if the negative sign is right
             return b.wall_temperature[t] == 0.5 * (
                    b.hot_side.properties_in[t].temperature +
                    b.hot_side.properties_out[t].temperature) \
@@ -96,14 +102,14 @@ class HeatExchangerDynamic(HeatExchanger):
             doc='Unit heat balance equation with the added capacitance term'
         )
         def dynamic_heat_balance(b, t):
-            return 1e-3 * b.hot_side.heat[t] + 1e-3 * b.cold_side.heat[t] == \
-                   -b.dTdt[t] * b.heat_capacity * 1e-3
+            return b.hot_side.heat[t] + b.cold_side.heat[t] == \
+                   -b.dTdt[t] * b.heat_capacity
 
         self.dynamic_heat_balance.deactivate()
-
-    def activate_dynamic_heat_eq(self):
         t0 = self.flowsheet().config.time.first()
         self.dTdt[:].value = 0
         self.dTdt[t0].fix(0)
+
+    def activate_dynamic_heat_eq(self):
         self.unit_heat_balance.deactivate()
         self.dynamic_heat_balance.activate()

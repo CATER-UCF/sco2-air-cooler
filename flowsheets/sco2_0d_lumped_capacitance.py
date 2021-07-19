@@ -7,7 +7,7 @@ from idaes.generic_models.unit_models.heat_exchanger import delta_temperature_lm
 from idaes.generic_models.properties import swco2
 from idaes.power_generation.properties import FlueGasParameterBlock
 from util import print_results_0d
-from models import HeatExchangerDynamic
+from models import HeatExchangerLumpedCapacitance
 
 
 def set_boundary_conditions(m):
@@ -55,12 +55,14 @@ def set_boundary_conditions(m):
 def make_model():
 
     m = pe.ConcreteModel()
-    m.fs = FlowsheetBlock(default={"dynamic": True, "time_set": [0, 120], "time_units": pe.units.s})
+    m.fs = FlowsheetBlock(default={"dynamic": True,
+                                   "time_set": [0, 300, 600, 900, 1200, 1500],
+                                   "time_units": pe.units.s})
 
     m.fs.prop_sco2 = swco2.SWCO2ParameterBlock()
     m.fs.prop_fluegas = FlueGasParameterBlock()
 
-    m.fs.HE = HeatExchangerDynamic(default={
+    m.fs.HE = HeatExchangerLumpedCapacitance(default={
         "delta_temperature_callback": delta_temperature_lmtd_callback,
         "cold_side_name": "shell",
         "hot_side_name": "tube",
@@ -108,8 +110,14 @@ print(f'T wall: {t_wall}')
 
 m.fs.HE.activate_dynamic_heat_eq()
 for t in m.fs.time:
-    if t > 60:
+    if t >= 300 and t < 600:
+        m.fs.HE.shell_inlet.temperature[t].fix(288.15 - 10)
+    elif t >= 600 and t < 900:
+        m.fs.HE.shell_inlet.temperature[t].fix(288.15)
+    elif t >=900 and t < 1200:
         m.fs.HE.shell_inlet.temperature[t].fix(288.15 + 10)
+    elif t >= 1200:
+        m.fs.HE.shell_inlet.temperature[t].fix(288.15)
 
 solver.solve(m, tee=True)
 
@@ -120,10 +128,10 @@ print('')
 print_results_0d(m.fs.HE)
 
 print('')
-print('Time-discretized results (at time=120):')
+print('Time-discretized results (at time=600):')
 print('+++++++++++++++++++++++++++++++++++++++')
 print('')
-print_results_0d(m.fs.HE, t=120)
+print_results_0d(m.fs.HE, t=600)
 
 t_tube_in = pe.value(m.fs.HE.tube.properties_in[:].temperature)
 t_tube_out = pe.value(m.fs.HE.tube.properties_out[:].temperature)
@@ -132,13 +140,31 @@ t_shell_out = pe.value(m.fs.HE.shell.properties_out[:].temperature)
 t_wall = pe.value(m.fs.HE.wall_temperature[:])
 hd = np.array(pe.value(m.fs.HE.heat_duty[:])) * -1e-6
 
-plt.plot(t_tube_in, label='t tube in')
-plt.plot(t_tube_out, label='t tube out')
-plt.plot(t_shell_in, label='t shell in')
-plt.plot(t_shell_out, label='t shell out')
-plt.plot(t_wall, label='t wall')
+time = [t for t in m.fs.time]
+plt.plot(time, t_tube_in, label='t tube in')
+plt.plot(time, t_tube_out, label='t tube out')
+plt.plot(time, t_shell_in, label='t shell in')
+plt.plot(time, t_shell_out, label='t shell out')
+plt.plot(time, t_wall, label='t wall')
 plt.xlabel('Time (s)')
 plt.ylabel('Temperature (K)')
 plt.title('Dynamic Model - Temperatures')
+plt.legend()
+plt.show()
+
+
+plt.plot(time, t_tube_out, label='t tube out')
+plt.xlabel('Time (s)')
+plt.ylabel('Temperature (K)')
+plt.title('Dynamic Model - Temperatures')
+plt.legend()
+plt.show()
+
+
+rho_tube_out = pe.value(m.fs.HE.tube.properties_out[:].dens_mass)
+plt.plot(time, rho_tube_out, label='Rho tube out')
+plt.xlabel('Time (s)')
+plt.ylabel('Density (kg/m3)')
+plt.title('Dynamic Model - Density')
 plt.legend()
 plt.show()

@@ -185,12 +185,6 @@ for idx, e in enumerate(all_elements):
     tube_p += tube_dp
     e.tube_outlet.pressure[:].fix(tube_p)
 
-# Fix the HTCs in every element
-for e in all_elements:
-    e.crossflow_factor.fix(0.5)
-    e.area.fix(1)
-    e.overall_heat_transfer_coefficient[:].fix(UA / n_elements)
-
 # Paste codgen arc code block here:
 
 # Add tube-side Arcs

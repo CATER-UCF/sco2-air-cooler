@@ -28,12 +28,14 @@ Results are added to [here](./flowsheets/sco2_2d_steady_state). The code gen pro
 The 2D model is showing reasonable results for steady-state. Without air stream mixing, the flowsheet solves with little difficulty. With mixing, it becomes harder to solve. In any case, the next steps are to:
 
 1. Add the constraints and equations to make HTC's a function of fluid properties. 
-2. Add a lumped capacitance term to the 0D model's energy balance. This is started [here](./models/heat_exchanger_0d_dynamic.py).
+2. ~~Add a lumped capacitance term to the 0D model's energy balance. This is started [here](./models/heat_exchanger_lumped_capacitance.py).~~ Done!
 
-However... I'm having difficulty setting up a dynamic flowheet. Here, I tried using the standard 0D IDAES heat exchanger as a baseline:
+Update (2021/07/19):
 
-```
-python ./flowsheets/sco2_0d_dynamic.py
-```
+The lumped capacitance model is working with the 2D flow network. However, we have to set the `dynamic` flag to False in the unit models. This is essentially an assumption that there is no mass accumulation in the heat exchanger tubes, which may not be entirely correct. Still, we can at least model the transient response to temperature step changes:
 
-The model solves but the results don't make sense yet. Inlet conditions are fixed at every time step. The outlet mass flow flows, though, don't match the inlet mass flows. I tried fixing the outlet mass flows but then the model doesn't solve.
+![](./images/transient_simulation.png)
+
+The full 2D, transient model takes up to 30 minutes to solve. This is with 56 heat exchanger elements, 100 time discretization steps, and constant heat transfer coefficients:
+
+![](./images/time_elapsed.png)
