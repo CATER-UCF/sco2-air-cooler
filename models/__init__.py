@@ -1,1 +1,2 @@
 from .heat_exchanger_lumped_capacitance import HeatExchangerLumpedCapacitance
+from .heat_exchanger_finned_tube import HeatExchangerFinnedTube
