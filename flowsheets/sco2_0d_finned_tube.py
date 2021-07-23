@@ -16,7 +16,7 @@ def set_boundary_conditions(m):
     shell_flow = 44004.14222
     tube_inlet_temperature = 384.35
     tube_inlet_pressure = 7751362.5
-    tube_outlet_pressure = 7599375
+    tube_outlet_pressure = 7599209 #7542209 #7599375
     tube_flow = 13896.84163
 
     shell_area = 690073.9153
@@ -119,8 +119,8 @@ print(f'T wall: {t_wall}')
 print('')
 
 
-m.fs.HE.tube_outlet.pressure[:].unfix()
-m.fs.HE.add_dP_eqs()
+#m.fs.HE.tube_outlet.pressure[:].unfix()
+#m.fs.HE.add_dP_eqs()
 
 print('Solving with HTC and pressure loss equations...')
 solver.solve(m, tee=True)
@@ -197,9 +197,13 @@ plt.legend()
 plt.show()
 
 
-p_tube_out = pe.value(m.fs.HE.tube.properties_out[:].pressure)
-plt.plot(time, p_tube_out, label='P tube out')
+hconv_tube_in = pe.value(m.fs.HE.H_tube_in[:])
+hconv_tube_out = pe.value(m.fs.HE.H_tube_out[:])
+
+plt.plot(time, hconv_tube_in, label='HTC in')
+plt.plot(time, hconv_tube_out, label='HTC out')
+
 plt.xlabel('Time (s)')
-plt.ylabel('Pressure (Pa)')
+plt.ylabel('HTC (W / m^2 K)')
 plt.legend()
 plt.show()
