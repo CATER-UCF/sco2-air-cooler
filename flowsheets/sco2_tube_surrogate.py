@@ -7,28 +7,35 @@ Work in progress...
 import numpy as np
 import matplotlib.pyplot as plt
 import pyomo.environ as pe
+import pyomo as pyo
 from idaes.core import FlowsheetBlock
 from idaes.generic_models.properties import swco2
 from models import TubeSurrogate
+import pandas as pd
 
-N_DOE = 20
+N_DOE = 30
 
 
-def make_model(sco2_t, sco2_p, sco2_mol_flow):
+def make_model(sco2_t, sco2_p, sco2_mol_flow, dyn=True, n_pts=10):
 
     m = pe.ConcreteModel()
-    m.fs = FlowsheetBlock(default={"dynamic": True,
-                                   "time_set": [0, N_DOE ** 2],
-                                   "time_units": pe.units.s})
+    if dyn:
+        m.fs = FlowsheetBlock(default={"dynamic": True,
+                                       "time_set": [0, n_pts],
+                                       "time_units": pe.units.s})
+    else:
+        m.fs = FlowsheetBlock()
 
     m.fs.prop_sco2 = swco2.SWCO2ParameterBlock()
     m.fs.feed = TubeSurrogate(default={"property_package": m.fs.prop_sco2})
 
     m.fs.feed.add_geometry()
-    m.fs.feed.add_hconv_eqs()
+    m.fs.feed.use_gnielinski()
+    m.fs.feed.use_churchill()
 
-    m.discretizer = pe.TransformationFactory('dae.finite_difference')
-    m.discretizer.apply_to(m, nfe=N_DOE ** 2 - 1, wrt=m.fs.time, scheme="BACKWARD")
+    if dyn:
+        m.discretizer = pe.TransformationFactory('dae.finite_difference')
+        m.discretizer.apply_to(m, nfe=n_pts - 1, wrt=m.fs.time, scheme="BACKWARD")
 
     m.fs.feed.tube_inner_perimeter = 0.0275 * 3.14159
     m.fs.feed.tube_length = 195
@@ -45,19 +52,18 @@ def make_model(sco2_t, sco2_p, sco2_mol_flow):
     return m
 
 
-m = make_model(384.35, 7751362.5, 13896.84163)
-
-m.fs.feed.initialize()
-solver = pe.SolverFactory('ipopt')
-
+m = make_model(384.35, 7751362.5, 13896.84163, dyn=True, n_pts=N_DOE ** 2)
 
 # Full-factorial DOE over a range of temperatures and pressures
 t_min = 300
-t_max = 400
+t_max = 310
 p_min = 7450000
 p_max = 7760000
-t = np.linspace(t_min, t_max, N_DOE)
-p = np.linspace(p_min, p_max, N_DOE)
+cheb = np.polynomial.chebyshev.chebpts1(N_DOE)
+cheb = cheb / cheb[-1]
+
+t = t_min + (cheb + 1) / 2 * (t_max - t_min)
+p = p_min + (cheb + 1) / 2 * (p_max - p_min)
 t_sco2, p_sco2 = np.meshgrid(t, p)
 
 t_flat = t_sco2.flatten()
@@ -68,6 +74,9 @@ for i, t in enumerate(m.fs.time):
     m.fs.feed.outlet.pressure[t].fix(p_flat[i])
     m.fs.feed.outlet.enth_mol[t].fix(sco2_enthalpy)
 
+m.fs.feed.initialize()
+solver = pe.SolverFactory('ipopt')
+
 solver.options = {
             "tol": 1e-6,
             "linear_solver": "ma27",
@@ -76,11 +85,46 @@ solver.options = {
 
 solver.solve(m, tee=True)
 
-h = pe.value(m.fs.feed.hconv_tube[:])
-HTC = np.reshape(h, (N_DOE, N_DOE))
-plt.contourf(t_sco2, p_sco2, HTC)
-cb = plt.colorbar()
-plt.xlabel('Temperature (K)')
-plt.ylabel('Pressure (Pa)')
-plt.title('HTC as a Function of T and P')
+hconv = np.array(pe.value(m.fs.feed.hconv_tube[:]))
+HTC = np.reshape(hconv, (N_DOE, N_DOE))
+
+fig, ax = plt.subplots(1)
+cntr = ax.contourf(t_sco2, p_sco2, HTC)
+cb = plt.colorbar(cntr)
+ax.set_xlabel('Temperature (K)')
+ax.set_ylabel('Pressure (Pa)')
+ax.set_title('HTC as a Function of T and P')
+
+fig, ax = plt.subplots(2)
+ax[0].plot(t_flat, hconv, '.')
+ax[1].plot(p_flat, hconv, '.')
+ax[0].set_xlabel('Temperature (K)')
+ax[1].set_xlabel('Pressure (Pa)')
+
+
+dp = np.array(pe.value(m.fs.feed.dP_over_l[:])) * 195
+DP = np.reshape(dp, (N_DOE, N_DOE))
+
+fig, ax = plt.subplots(1)
+cntr = ax.contourf(t_sco2, p_sco2, DP)
+cb = plt.colorbar(cntr)
+ax.set_xlabel('Temperature (K)')
+ax.set_ylabel('Pressure (Pa)')
+ax.set_title('Pressure Loss as a Function of T and P')
+
+fig, ax = plt.subplots(2)
+ax[0].plot(t_flat, dp, '.')
+ax[1].plot(p_flat, dp, '.')
+ax[0].set_xlabel('Temperature (K)')
+ax[1].set_xlabel('Pressure (Pa)')
+
+
+df = pd.DataFrame(data={
+    'temperature': t_flat,
+    'pressure': p_flat,
+    'hconv': hconv,
+    'dP_over_l': dp / 195
+})
+df.to_csv('./data/DOE_30.csv')
+
 plt.show()
