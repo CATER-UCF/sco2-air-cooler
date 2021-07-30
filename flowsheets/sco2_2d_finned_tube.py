@@ -400,7 +400,7 @@ print('')
 print('Tube HTCs (t=0):')
 for i, e in enumerate(all_elements):
     HTC_in = pe.value(e.H_tube_in[0])
-    HTC_out = pe.value(e.H_tube_in[0])
+    HTC_out = pe.value(e.H_tube_out[0])
 
     print(f'Element #: {i}:')
     print(f'H tube in: {HTC_in}')
