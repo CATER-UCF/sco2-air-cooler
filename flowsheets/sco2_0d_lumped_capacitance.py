@@ -153,11 +153,18 @@ plt.legend()
 plt.show()
 
 
-plt.plot(time, t_tube_out, label='t tube out')
-plt.xlabel('Time (s)')
-plt.ylabel('Temperature (K)')
-plt.title('Dynamic Model - Temperatures')
-plt.legend()
+fig, ax = plt.subplots(2, 1)
+
+ax[0].plot(time, t_tube_out, c='b', label='CO2 Exit')
+ax[0].set_ylabel('Temperature (K)')
+ax[0].set_title('Transient Response')
+ax[0].legend()
+
+ax[1].plot(time, t_shell_in, c='r', label='Air Inlet')
+ax[1].set_xlabel('Time (s)')
+ax[1].set_ylabel('Temperature (K)')
+ax[1].legend()
+
 plt.show()
 
 

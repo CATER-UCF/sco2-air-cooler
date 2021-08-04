@@ -3,8 +3,9 @@ Surrogate model using an exponential function of the form:
 
 hconv = a + sum(b_i * exp(-c_i(T - mu) ** e_i))
 
-...for each pressure. This seems to give a better fit. Though interpolating
-between pressures might pose some difficulty.
+...at two different pressures, then linearly interpolating between them. This
+produces a poor fit since T* is different for each pressure. It might be
+possible to improve this if we interpolate between (P - P*) somehow.
 """
 import pandas as pd
 import numpy as np
@@ -53,61 +54,71 @@ for i in range(npr):
     ax[0].plot(ti, hi, label=f'p={pi}')
 
 
-def exp_kernel(x, a, mu, b1, c1, b2, c2, b3, c3):
+def exp_kernel1(x, a, mu, b1, c1, b2, c2, b3, c3):
     return a + b1 * np.exp(-c1 * np.abs(x - mu) ** 1) \
-           + b2 * np.exp(-c2 * np.abs(x - mu) ** 0.5) \
+           + b2 * np.exp(-c2 * np.abs(x - mu) ** 1.5) \
            + b3 * np.exp(-c3 * np.abs(x - mu) ** 2)
 
 
-popts = []
-errors = []
-pct_errors = []
-plabels = ['a', 'mu', 'b1', 'c1', 'b2', 'c2', 'b3', 'c3']
+def exp_kernel2(x, a, mu, b1, c1, b2, c2, b3, c3):
+    return a + b1 * np.exp(-c1 * np.abs(x - mu) ** 4) \
+           + b2 * np.exp(-c2 * np.abs(x - mu) ** 3) \
+           + b3 * np.exp(-c3 * np.abs(x - mu) ** 2)
 
-for i in range(npr):
 
-    pi = p_space[i]
+def make_fit(pi, kernel, title):
+
     df_tmp = df[abs(df['pressure'] - pi) < 0.01].sort_values('temperature')
     ti = np.array(df_tmp['temperature'])
     hi = np.array(df_tmp['hconv'])
 
     a = min(hi)
     b = (max(hi) - min(hi)) / 3
-    mu = t_star_pred(p_space[i])[0]
+    mu = t_star_pred(pi)[0]
 
     p_init = (a, mu, b, 1, b, 1, b, 1)
+    popt, pcov = optimize.curve_fit(kernel, ti, hi, p0=p_init)
 
-    try:
-        popt, pcov = optimize.curve_fit(exp_kernel, ti, hi, p0=p_init)
-    except RuntimeError:
-        popt = p_init
-        print('Optimal parameters not found!!!')
+    hfit = kernel(ti, *popt)
+    hinit = kernel(ti, *p_init)
 
-    popts.append(popt)
-    hfit = exp_kernel(ti, *popt)
-    hinit = exp_kernel(ti, *p_init)
+    fig, ax1 = plt.subplots(2)
+    ax1[0].plot(ti, hi, label='hconv')
+    ax1[0].plot(ti, hfit, label='hconv fit')
+    ax1[0].plot(ti, hinit, label='hconv init')
+    ax1[0].legend()
+    ax1[0].set_title(title)
+    ax1[1].plot(ti, hfit - hi, label='Error')
+    ax1[1].legend()
+
+    return popt
+
+
+p1 = min(p_space)[0]
+p2 = max(p_space)[0]
+popt1 = make_fit(p1, exp_kernel1, 'kernel 1')
+popt2 = make_fit(p2, exp_kernel2, 'kernel 2')
+
+errors = []
+pct_errors = []
+
+for i in range(npr):
+
+    pi = p_space[i][0]
+    df_tmp = df[abs(df['pressure'] - pi) < 0.01].sort_values('temperature')
+    ti = np.array(df_tmp['temperature'])
+    hi = np.array(df_tmp['hconv'])
+
+    exp1 = exp_kernel1(ti, *popt1)
+    exp2 = exp_kernel2(ti, *popt2)
+
+    hfit = exp1 + (exp2 - exp1) * (pi - p1) / (p2 - p1)
 
     errors.append(hfit - hi)
     pct_errors.append(100 * (hfit - hi) / hi)
 
-    ax[1].plot(ti, hfit, label=f'hconv fit, P={pi}')
-
-    if i % 10 == 0:
-        fig, ax1 = plt.subplots(2)
-        ax1[0].plot(ti, hi, label='hconv')
-        ax1[0].plot(ti, hfit, label='hconv fit')
-        ax1[0].plot(ti, hinit, label='hconv init')
-        ax1[0].legend()
-        ax1[0].set_title(f'P = {pi}')
-        ax1[1].plot(ti, hfit - hi, label='Error')
-        ax1[1].legend()
-
-p_arr = np.array(popts)
-fig, ax = plt.subplots(3, 3)
-
-for i in range(p_arr.shape[1]):
-    ax[i % 3, i // 3].plot(p_space, p_arr[:, i])
-    ax[i % 3, i // 3].set_title(plabels[i])
+    if abs(pi - p1) < 0.01 or abs(pi - p2) < 0.01:
+        ax[1].plot(ti, hfit, label=f'hconv fit, P={pi}')
 
 
 errs = np.concatenate(errors, axis=None)
