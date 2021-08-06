@@ -28,7 +28,8 @@ for _ in range(n_elements):
         "delta_temperature_callback": delta_temperature_lmtd_callback,
         "cold_side_name": "shell",
         "hot_side_name": "tube",
-        "shell": {"property_package": m.fs.prop_fluegas},
+        "shell": {"property_package": m.fs.prop_fluegas,
+                  "has_pressure_change": True},
         "tube": {"property_package": m.fs.prop_sco2,
                 "has_pressure_change": True},
         "flow_pattern": HeatExchangerFlowPattern.crossflow}))
@@ -152,6 +153,7 @@ def fix_shell_inlet(e):
     e.shell_inlet.flow_mol_comp[:, "SO2"].fix(0)
     e.shell_inlet.temperature[:].fix(shell_inlet_temperature)
     e.shell_inlet.pressure[:].fix(101325)
+    e.shell.deltaP[:].fix(0)
 
 
 def unfix_shell_inlet(e):

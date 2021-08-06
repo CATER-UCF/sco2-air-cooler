@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import pyomo.environ as pe
 from idaes.core import FlowsheetBlock
 from idaes.generic_models.unit_models import HeatExchanger, HeatExchangerFlowPattern
-from idaes.generic_models.unit_models.heat_exchanger import delta_temperature_lmtd_callback
+from idaes.generic_models.unit_models.heat_exchanger import delta_temperature_amtd_callback
 from idaes.generic_models.properties import swco2
 from idaes.power_generation.properties import FlueGasParameterBlock
 from util import print_results_0d
@@ -49,6 +49,10 @@ def set_boundary_conditions(m):
     m.fs.HE.shell_inlet.temperature[:].fix(shell_inlet_temperature)
     m.fs.HE.shell_inlet.pressure[:].fix(101325)
     m.fs.HE.shell_outlet.pressure[:].fix(101325 * 0.95)
+
+    m.fs.HE.tube_outlet[:].enth_mol.setub(tube_inlet_enthalpy)
+    m.fs.HE.shell_outlet.temperature[:].setlb(shell_inlet_temperature)
+
     return m
 
 
@@ -63,7 +67,7 @@ def make_model():
     m.fs.prop_fluegas = FlueGasParameterBlock()
 
     m.fs.HE = HeatExchangerLumpedCapacitance(default={
-        "delta_temperature_callback": delta_temperature_lmtd_callback,
+        "delta_temperature_callback": delta_temperature_amtd_callback,
         "cold_side_name": "shell",
         "hot_side_name": "tube",
         "shell": {"property_package": m.fs.prop_fluegas,
@@ -77,7 +81,7 @@ def make_model():
     m.fs.HE.add_dynamic_variable_constraints()
 
     m.discretizer = pe.TransformationFactory('dae.finite_difference')
-    m.discretizer.apply_to(m, nfe=500, wrt=m.fs.time, scheme="BACKWARD")
+    m.discretizer.apply_to(m, nfe=100, wrt=m.fs.time, scheme="BACKWARD")
 
     return set_boundary_conditions(m)
 
@@ -174,4 +178,34 @@ plt.xlabel('Time (s)')
 plt.ylabel('Density (kg/m3)')
 plt.title('Dynamic Model - Density')
 plt.legend()
+
+
+fig, ax = plt.subplots(3, 1)
+
+m_tube_in = pe.value(m.fs.HE.tube.properties_in[:].flow_mass)
+m_tube_out = pe.value(m.fs.HE.tube.properties_out[:].flow_mass)
+m_shell_in = pe.value(m.fs.HE.shell.properties_in[:].flow_mass)
+m_shell_out = pe.value(m.fs.HE.shell.properties_out[:].flow_mass)
+
+flow_c_hot = pe.value(m.fs.HE.flow_coefficient_hot_side[:])
+flow_c_cold = pe.value(m.fs.HE.flow_coefficient_cold_side[:])
+
+print(f'Flow coefficient hot: {flow_c_hot[0]}')
+print(f'Flow coefficient cold: {flow_c_cold[0]}')
+
+ax[0].plot(time, m_tube_in, label='SCO2 in')
+ax[0].plot(time, m_tube_out, label='SCO2 out')
+ax[0].set_title('Mass flow')
+ax[0].legend()
+
+ax[1].plot(time, m_tube_in, label='SCO2 in')
+ax[1].plot(time, m_tube_out, label='SCO2 out')
+ax[1].set_xlabel('Time (s)')
+ax[1].legend()
+
+ax[2].plot(time, flow_c_hot, label='Flow C Hot')
+ax[2].plot(time, flow_c_cold, label='Flow C Cold')
+ax[2].set_xlabel('Time (s)')
+ax[2].legend()
+
 plt.show()

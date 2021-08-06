@@ -1,24 +1,10 @@
 """
-This a simple flowsheet containing a 0D, air-cooled heat exchanger. The unit
-model is setup differently in four examples. Our ultimate goal is to model
-countercurrent, crossflow geometry in two dimensions as a network of 0D models.
-For now though, I just want to make sure I understand how transient modelling
-works in IDAES.
+Similar to the 0D lumped capacitance flowsheet, except now we use a dynamic
+model. And instead of fixing the exit pressures, we specify dP's and flow
+coefficients.
 
-
-Example 1: steady state
-- This is a baseline case to get us started and compare.
-
-Example 2: time discretized
-- Here, the dynamic flag is set to False but the model is time discretized. My next step
-  will be to add wall temperature and time-derivative terms for a lumped capacitance model.
-
-Example 3: time discretized dynamic
-- Here, the dynamic flag is set to True. The model solves but the results don't
-  make sense since exit mass flows are free to change.
-
-Example 4: time discretized dynamic fixed mass
-- Same as Example 3 but the mass flows are all fixed. Now there are too few degrees of freedom.
+This is currently not solving. It seems we still have more variables than
+equality constraints.
 """
 import numpy as np
 import matplotlib.pyplot as plt
@@ -29,6 +15,7 @@ from idaes.generic_models.unit_models.heat_exchanger import delta_temperature_am
 from idaes.generic_models.properties import swco2
 from idaes.power_generation.properties import FlueGasParameterBlock
 from util import print_results_0d
+from models import HeatExchangerLumpedCapacitance
 
 
 def set_boundary_conditions(m):
@@ -46,18 +33,19 @@ def set_boundary_conditions(m):
     tube_area = 19542.2771
     tube_HTC = 1000
 
-    UA = 1 / (1 / (shell_area * shell_HTC) + 1 / (tube_area * tube_HTC))
+    tube_mass = 1160 * 322
 
     m.fs.HE.crossflow_factor.fix(0.8)
     m.fs.HE.area.fix(1)
-    m.fs.HE.overall_heat_transfer_coefficient[:].fix(UA)
+    m.fs.HE.UA_cold_side[:].fix(shell_area * shell_HTC)
+    m.fs.HE.UA_hot_side[:].fix(tube_area * tube_HTC)
+    m.fs.HE.heat_capacity = tube_mass * 466
 
     tube_inlet_enthalpy = swco2.htpx(T=tube_inlet_temperature * pe.units.K, P=tube_inlet_pressure * pe.units.Pa)
 
     m.fs.HE.tube_inlet.flow_mol[:].fix(tube_flow)
     m.fs.HE.tube_inlet.pressure[:].fix(tube_inlet_pressure)
     m.fs.HE.tube_inlet.enth_mol[:].fix(tube_inlet_enthalpy)
-    m.fs.HE.tube_outlet.pressure[:].fix(tube_outlet_pressure)
 
     m.fs.HE.shell_inlet.flow_mol_comp[:, "H2O"].fix(0.01027 * shell_flow)
     m.fs.HE.shell_inlet.flow_mol_comp[:, "CO2"].fix(0.000411592 * shell_flow)
@@ -67,39 +55,31 @@ def set_boundary_conditions(m):
     m.fs.HE.shell_inlet.flow_mol_comp[:, "SO2"].fix(0)
     m.fs.HE.shell_inlet.temperature[:].fix(shell_inlet_temperature)
     m.fs.HE.shell_inlet.pressure[:].fix(101325)
-    m.fs.HE.shell_outlet.pressure[:].fix(101325 * 0.95)
-    return m
 
+    # Instead of fixing exit pressures, we can take these values from
+    # running `sco2_0d_lumped_capacitance.py`:
+    m.fs.HE.flow_coefficient_cold_side[:].fix(4.004)
+    m.fs.HE.flow_coefficient_hot_side[:].fix(248.509)
+    m.fs.HE.tube.deltaP[:].fix(7599375 - 7751362.5)
+    m.fs.HE.shell.deltaP[:].fix(96258.75 - 101325)
 
-def fix_outlet_flows(m):
-
-    shell_flow = 44004.14222
-    tube_flow = 13896.84163
-
-    m.fs.HE.tube_outlet.flow_mol[:].fix(tube_flow)
-
-    m.fs.HE.shell_outlet.flow_mol_comp[:, "H2O"].fix(0.01027 * shell_flow)
-    m.fs.HE.shell_outlet.flow_mol_comp[:, "CO2"].fix(0.000411592 * shell_flow)
-    m.fs.HE.shell_outlet.flow_mol_comp[:, "N2"].fix(0.780066026 * shell_flow)
-    m.fs.HE.shell_outlet.flow_mol_comp[:, "O2"].fix(0.209252382 * shell_flow)
-    m.fs.HE.shell_outlet.flow_mol_comp[:, "NO"].fix(0)
-    m.fs.HE.shell_outlet.flow_mol_comp[:, "SO2"].fix(0)
+    m.fs.HE.tube_outlet[:].enth_mol.setub(tube_inlet_enthalpy)
+    m.fs.HE.shell_outlet.temperature[:].setlb(shell_inlet_temperature)
 
     return m
 
 
-def make_model(time_discretize=False, dyn=False):
+def make_model():
 
     m = pe.ConcreteModel()
-    if time_discretize:
-        m.fs = FlowsheetBlock(default={"dynamic": True, "time_set": [0, 120], "time_units": pe.units.s})
-    else:
-        m.fs = FlowsheetBlock(default={"dynamic": False})
+    m.fs = FlowsheetBlock(default={"dynamic": True,
+                                   "time_set": [0, 300, 600, 900, 1200, 1500],
+                                   "time_units": pe.units.s})
 
     m.fs.prop_sco2 = swco2.SWCO2ParameterBlock()
     m.fs.prop_fluegas = FlueGasParameterBlock()
 
-    m.fs.HE = HeatExchanger(default={
+    m.fs.HE = HeatExchangerLumpedCapacitance(default={
         "delta_temperature_callback": delta_temperature_amtd_callback,
         "cold_side_name": "shell",
         "hot_side_name": "tube",
@@ -108,11 +88,13 @@ def make_model(time_discretize=False, dyn=False):
         "tube": {"property_package": m.fs.prop_sco2,
                  "has_pressure_change": True},
         "flow_pattern": HeatExchangerFlowPattern.crossflow,
-        "dynamic": dyn})
+        "dynamic": True})
 
-    if time_discretize:
-        m.discretizer = pe.TransformationFactory('dae.finite_difference')
-        m.discretizer.apply_to(m, nfe=100, wrt=m.fs.time, scheme="BACKWARD")
+    m.fs.HE.add_dynamic_variables()
+    m.fs.HE.add_dynamic_variable_constraints()
+
+    m.discretizer = pe.TransformationFactory('dae.finite_difference')
+    m.discretizer.apply_to(m, nfe=100, wrt=m.fs.time, scheme="BACKWARD")
 
     return set_boundary_conditions(m)
 
@@ -123,11 +105,12 @@ Example 1: Steady-state
 m = make_model()
 m.fs.model_check()
 print('Initializing steady-state model...')
-m.fs.HE.initialize()
+
+m.fs.HE.initialize(outlvl=3, optarg={'halt_on_ampl_error': 'yes'})
 
 solver = pe.SolverFactory('ipopt')
 solver.options = {
-            "tol": 1e-7,
+            "tol": 1e-6,
             "linear_solver": "ma27",
             "max_iter": 500,
         }
@@ -139,26 +122,19 @@ print('+++++++++++++++++++++')
 print('')
 print_results_0d(m.fs.HE)
 
+t_wall = pe.value(m.fs.HE.wall_temperature[0])
+print(f'T wall: {t_wall}')
 
-"""
-Example 2: Time-discretized model with temperature step change
-"""
-m = make_model(time_discretize=True)
-m.fs.model_check()
-print('Initializing time-discretized model...')
-m.fs.HE.initialize()
-
-solver = pe.SolverFactory('ipopt')
-solver.options = {
-            "tol": 1e-7,
-            "linear_solver": "ma27",
-            "max_iter": 500,
-        }
-solver.solve(m, tee=True)
-
+m.fs.HE.activate_dynamic_heat_eq()
 for t in m.fs.time:
-    if t > 60:
+    if t >= 300 and t < 600:
+        m.fs.HE.shell_inlet.temperature[t].fix(288.15 - 10)
+    elif t >= 600 and t < 900:
+        m.fs.HE.shell_inlet.temperature[t].fix(288.15)
+    elif t >=900 and t < 1200:
         m.fs.HE.shell_inlet.temperature[t].fix(288.15 + 10)
+    elif t >= 1200:
+        m.fs.HE.shell_inlet.temperature[t].fix(288.15)
 
 solver.solve(m, tee=True)
 
@@ -169,98 +145,80 @@ print('')
 print_results_0d(m.fs.HE)
 
 print('')
-print('Time-discretized results (at time=120):')
+print('Time-discretized results (at time=600):')
 print('+++++++++++++++++++++++++++++++++++++++')
 print('')
-print_results_0d(m.fs.HE, t=120)
-
-
-"""
-Example 3: Time-discretized dynamic model (no step change) 
-"""
-m = make_model(time_discretize=True, dyn=True)
-m.fs.model_check()
-print('Initializing dynamic model...')
-m.fs.HE.initialize()
-
-solver = pe.SolverFactory('ipopt')
-solver.options = {
-            "tol": 1e-7,
-            "linear_solver": "ma27",
-            "max_iter": 500,
-        }
-solver.solve(m, tee=True)
-
-print('')
-print('Dynamic model results (at time=0):')
-print('++++++++++++++++++++++++++++++++++')
-print('')
-print_results_0d(m.fs.HE)
-
-print('')
-print('Dynamic model results (at time=120):')
-print('++++++++++++++++++++++++++++++++++++')
-print('')
-print_results_0d(m.fs.HE, t=120)
+print_results_0d(m.fs.HE, t=600)
 
 t_tube_in = pe.value(m.fs.HE.tube.properties_in[:].temperature)
 t_tube_out = pe.value(m.fs.HE.tube.properties_out[:].temperature)
 t_shell_in = pe.value(m.fs.HE.shell.properties_in[:].temperature)
 t_shell_out = pe.value(m.fs.HE.shell.properties_out[:].temperature)
+t_wall = pe.value(m.fs.HE.wall_temperature[:])
 hd = np.array(pe.value(m.fs.HE.heat_duty[:])) * -1e-6
 
-g_tube_in = pe.value(m.fs.HE.tube.properties_in[:].flow_mol)
-g_tube_out = pe.value(m.fs.HE.tube.properties_out[:].flow_mol)
-
-plt.plot(t_tube_in, label='t tube in')
-plt.plot(t_tube_out, label='t tube out')
-plt.plot(t_shell_in, label='t shell in')
-plt.plot(t_shell_out, label='t shell out')
+time = [t for t in m.fs.time]
+plt.plot(time, t_tube_in, label='t tube in')
+plt.plot(time, t_tube_out, label='t tube out')
+plt.plot(time, t_shell_in, label='t shell in')
+plt.plot(time, t_shell_out, label='t shell out')
+plt.plot(time, t_wall, label='t wall')
 plt.xlabel('Time (s)')
 plt.ylabel('Temperature (K)')
 plt.title('Dynamic Model - Temperatures')
 plt.legend()
-
-fig = plt.subplots(1)
-plt.plot(g_tube_in, label='Tube in')
-plt.plot(g_tube_out, label='Tube out')
-plt.xlabel('Time (s)')
-plt.ylabel('Mass flow (mol/s)')
-plt.title('Dynamic Model - sCO2 Mass Flows')
-plt.legend()
+plt.show()
 
 
-h2o = pe.value(m.fs.HE.shell.properties_out[:].flow_mol_comp["H2O"])
-co2 = pe.value(m.fs.HE.shell.properties_out[:].flow_mol_comp["CO2"])
-n2 = pe.value(m.fs.HE.shell.properties_out[:].flow_mol_comp["N2"])
-o2 = pe.value(m.fs.HE.shell.properties_out[:].flow_mol_comp["O2"])
+fig, ax = plt.subplots(2, 1)
 
-fig = plt.subplots(1)
-plt.plot(h2o, label='H2O out')
-plt.plot(co2, label='CO2 out')
-plt.plot(n2, label='N2 out')
-plt.plot(o2, label='O2 out')
-plt.xlabel('Time (s)')
-plt.ylabel('Mass flow (mol/s)')
-plt.title('Dynamic Model - Air Component Mass Flows')
-plt.legend()
+ax[0].plot(time, t_tube_out, c='b', label='CO2 Exit')
+ax[0].set_ylabel('Temperature (K)')
+ax[0].set_title('Transient Response')
+ax[0].legend()
+
+ax[1].plot(time, t_shell_in, c='r', label='Air Inlet')
+ax[1].set_xlabel('Time (s)')
+ax[1].set_ylabel('Temperature (K)')
+ax[1].legend()
 
 plt.show()
 
 
-"""
-Example 4: Dynamic model with fixed mass flows 
-"""
-m = make_model(time_discretize=True, dyn=True)
-m = fix_outlet_flows(m)
-m.fs.model_check()
-print('Initializing dynamic model...')
-m.fs.HE.initialize()
+rho_tube_out = pe.value(m.fs.HE.tube.properties_out[:].dens_mass)
+plt.plot(time, rho_tube_out, label='Rho tube out')
+plt.xlabel('Time (s)')
+plt.ylabel('Density (kg/m3)')
+plt.title('Dynamic Model - Density')
+plt.legend()
 
-solver = pe.SolverFactory('ipopt')
-solver.options = {
-            "tol": 1e-7,
-            "linear_solver": "ma27",
-            "max_iter": 500,
-        }
-solver.solve(m, tee=True)
+
+fig, ax = plt.subplots(3, 1)
+
+m_tube_in = pe.value(m.fs.HE.tube.properties_in[:].flow_mass)
+m_tube_out = pe.value(m.fs.HE.tube.properties_out[:].flow_mass)
+m_shell_in = pe.value(m.fs.HE.shell.properties_in[:].flow_mass)
+m_shell_out = pe.value(m.fs.HE.shell.properties_out[:].flow_mass)
+
+flow_c_hot = pe.value(m.fs.HE.flow_coefficient_hot_side[:])
+flow_c_cold = pe.value(m.fs.HE.flow_coefficient_cold_side[:])
+
+print(f'Flow coefficient hot: {flow_c_hot[0]}')
+print(f'Flow coefficient cold: {flow_c_cold[0]}')
+
+ax[0].plot(time, m_tube_in, label='SCO2 in')
+ax[0].plot(time, m_tube_out, label='SCO2 out')
+ax[0].set_title('Mass flow')
+ax[0].legend()
+
+ax[1].plot(time, m_tube_in, label='SCO2 in')
+ax[1].plot(time, m_tube_out, label='SCO2 out')
+ax[1].set_xlabel('Time (s)')
+ax[1].legend()
+
+ax[2].plot(time, flow_c_hot, label='Flow C Hot')
+ax[2].plot(time, flow_c_cold, label='Flow C Cold')
+ax[2].set_xlabel('Time (s)')
+ax[2].legend()
+
+plt.show()

@@ -67,6 +67,16 @@ class HeatExchangerLumpedCapacitance(HeatExchanger):
             initialize=1000.,
             doc='Overall heat transfer coefficient used to calculate wall temperature'
         )
+        self.flow_coefficient_hot_side = Var(
+            self.flowsheet().config.time,
+            initialize=0.,
+            doc='Relates dP to mass flow'
+        )
+        self.flow_coefficient_cold_side = Var(
+            self.flowsheet().config.time,
+            initialize=0.,
+            doc='Relates dP to mass flow'
+        )
 
     def add_dynamic_variable_constraints(self):
         @self.Constraint(
@@ -104,6 +114,24 @@ class HeatExchangerLumpedCapacitance(HeatExchanger):
         def dynamic_heat_balance(b, t):
             return b.hot_side.heat[t] + b.cold_side.heat[t] == \
                    -b.dTdt[t] * b.heat_capacity
+
+        @self.Constraint(
+            self.flowsheet().time,
+            doc='A simple relation for flow and dP'
+        )
+        def flow_coefficient_hot_eq(b, t):
+            return b.hot_side.deltaP[t] == \
+                   -b.flow_coefficient_hot_side[t] * \
+                   b.hot_side.properties_in[t].flow_mass
+
+        @self.Constraint(
+            self.flowsheet().time,
+            doc='A simple relation for flow and dP'
+        )
+        def flow_coefficient_cold_eq(b, t):
+            return b.cold_side.deltaP[t] == \
+                   -b.flow_coefficient_cold_side[t] * \
+                   b.cold_side.properties_in[t].flow_mass
 
         self.dynamic_heat_balance.deactivate()
         t0 = self.flowsheet().config.time.first()
