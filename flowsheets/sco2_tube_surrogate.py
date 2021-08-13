@@ -113,6 +113,9 @@ def run_doe(npr, nt, include_low_temperatures=False):
     hconvs = np.zeros(npr * nt)
     cp_mols = np.zeros(npr * nt)
     dps = np.zeros(npr * nt)
+    rhos = np.zeros(npr * nt)
+    Res = np.zeros(npr * nt)
+    fricts = np.zeros(npr * nt)
 
     solver = pe.SolverFactory('ipopt')
     solver.options = {
@@ -142,17 +145,22 @@ def run_doe(npr, nt, include_low_temperatures=False):
         m.fs.feed.initialize()
         solver.solve(m, tee=True)
 
+        temp = np.array(pe.value(m.fs.feed.properties[:].temperature))
         hconv = np.array(pe.value(m.fs.feed.hconv_tube[:]))
         dp = np.array(pe.value(m.fs.feed.dP_over_l[:]))
         cp_mol = np.array(pe.value(m.fs.feed.properties[:].cp_mol))
-        temp = np.array(pe.value(m.fs.feed.properties[:].temperature))
+        rho = np.array(pe.value(m.fs.feed.properties[:].dens_mass))
+        Re = np.array(pe.value(m.fs.feed.N_Re_tube[:]))
+        frict = np.array(pe.value(m.fs.feed.f_tube[:]))
 
         presss[i_start: i_end] = np.ones_like(h_full) * p
         temps[i_start: i_end] = temp
-
         hconvs[i_start: i_end] = hconv
         dps[i_start: i_end] = dp
         cp_mols[i_start: i_end] = cp_mol
+        rhos[i_start: i_end] = rho
+        Res[i_start: i_end] = Re
+        fricts[i_start: i_end] = frict
 
     fig, ax = plt.subplots(2)
     ax[0].plot(temps, hconvs, '.')
@@ -171,7 +179,10 @@ def run_doe(npr, nt, include_low_temperatures=False):
         'pressure': presss,
         'hconv': hconvs,
         'dP_over_l': dps,
-        'cp_mol': cp_mols
+        'cp_mol': cp_mols,
+        'rho': rhos,
+        'Re': Res,
+        'friction_factor': fricts
     })
     df.to_csv(f'./data/DOE_p{npr}_t{nt}.csv', index=None)
 
