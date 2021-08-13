@@ -115,6 +115,12 @@ class HeatExchangerLumpedCapacitance(HeatExchanger):
             return b.hot_side.heat[t] + b.cold_side.heat[t] == \
                    -b.dTdt[t] * b.heat_capacity
 
+        self.dynamic_heat_balance.deactivate()
+        t0 = self.flowsheet().config.time.first()
+        self.dTdt[:].value = 0
+        self.dTdt[t0].fix(0)
+
+    def add_pressure_flow_constraints(self):
         @self.Constraint(
             self.flowsheet().time,
             doc='A simple relation for flow and dP'
@@ -132,11 +138,6 @@ class HeatExchangerLumpedCapacitance(HeatExchanger):
             return b.cold_side.deltaP[t] == \
                    -b.flow_coefficient_cold_side[t] * \
                    b.cold_side.properties_in[t].flow_mass
-
-        self.dynamic_heat_balance.deactivate()
-        t0 = self.flowsheet().config.time.first()
-        self.dTdt[:].value = 0
-        self.dTdt[t0].fix(0)
 
     def activate_dynamic_heat_eq(self):
         self.unit_heat_balance.deactivate()

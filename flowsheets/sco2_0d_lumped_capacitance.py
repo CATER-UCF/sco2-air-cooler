@@ -79,6 +79,7 @@ def make_model():
 
     m.fs.HE.add_dynamic_variables()
     m.fs.HE.add_dynamic_variable_constraints()
+    m.fs.HE.add_pressure_flow_constraints()
 
     m.discretizer = pe.TransformationFactory('dae.finite_difference')
     m.discretizer.apply_to(m, nfe=100, wrt=m.fs.time, scheme="BACKWARD")

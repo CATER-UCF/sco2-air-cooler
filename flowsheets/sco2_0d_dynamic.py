@@ -1,10 +1,11 @@
 """
 Similar to the 0D lumped capacitance flowsheet, except now we use a dynamic
-model. And instead of fixing the exit pressures, we specify dP's and flow
-coefficients.
+model. And instead of fixing the exit pressures, we specify flow coefficients
+and make dP a function of flow.
 
-This is currently not solving. It seems we still have more variables than
-equality constraints.
+The results look reasonable but the solver is converging to a locally
+infeasible point. I suspect that this might be from having a constant flow
+coefficient since the sCO2 density changes quite dramatically.
 """
 import numpy as np
 import matplotlib.pyplot as plt
@@ -16,6 +17,7 @@ from idaes.generic_models.properties import swco2
 from idaes.power_generation.properties import FlueGasParameterBlock
 from util import print_results_0d
 from models import HeatExchangerLumpedCapacitance
+import idaes.core.util.model_statistics as stats
 
 
 def set_boundary_conditions(m):
@@ -24,7 +26,7 @@ def set_boundary_conditions(m):
     shell_flow = 44004.14222
     tube_inlet_temperature = 384.35
     tube_inlet_pressure = 7751362.5
-    tube_outlet_pressure = 7599375
+    #tube_outlet_pressure = 7599375
     tube_flow = 13896.84163
 
     shell_area = 690073.9153
@@ -32,7 +34,7 @@ def set_boundary_conditions(m):
 
     tube_area = 19542.2771
     tube_HTC = 1000
-
+    tube_volume = 1160 * 3.14195 * (0.0275 / 2) ** 2 * 0.195
     tube_mass = 1160 * 322
 
     m.fs.HE.crossflow_factor.fix(0.8)
@@ -60,11 +62,19 @@ def set_boundary_conditions(m):
     # running `sco2_0d_lumped_capacitance.py`:
     m.fs.HE.flow_coefficient_cold_side[:].fix(4.004)
     m.fs.HE.flow_coefficient_hot_side[:].fix(248.509)
-    m.fs.HE.tube.deltaP[:].fix(7599375 - 7751362.5)
-    m.fs.HE.shell.deltaP[:].fix(96258.75 - 101325)
 
-    m.fs.HE.tube_outlet[:].enth_mol.setub(tube_inlet_enthalpy)
-    m.fs.HE.shell_outlet.temperature[:].setlb(shell_inlet_temperature)
+    m.fs.HE.shell.material_accumulation[0, :, :].fix(0)
+    m.fs.HE.shell.energy_accumulation[0, :].fix(0)
+
+    m.fs.HE.tube.material_accumulation[0, :, :].fix(0)
+    m.fs.HE.tube.energy_accumulation[0, :].fix(0)
+
+    m.fs.HE.tube.volume[:].fix(tube_volume)
+
+    # TODO: calculate this properly, should be the same order of magnitude as
+    # that of the tube. Alternatively, we can make the shell side be not
+    # dynamic.
+    m.fs.HE.shell.volume[:].fix(tube_volume)
 
     return m
 
@@ -92,6 +102,7 @@ def make_model():
 
     m.fs.HE.add_dynamic_variables()
     m.fs.HE.add_dynamic_variable_constraints()
+    m.fs.HE.add_pressure_flow_constraints()
 
     m.discretizer = pe.TransformationFactory('dae.finite_difference')
     m.discretizer.apply_to(m, nfe=100, wrt=m.fs.time, scheme="BACKWARD")
@@ -197,6 +208,10 @@ fig, ax = plt.subplots(3, 1)
 
 m_tube_in = pe.value(m.fs.HE.tube.properties_in[:].flow_mass)
 m_tube_out = pe.value(m.fs.HE.tube.properties_out[:].flow_mass)
+
+p_tube_in = pe.value(m.fs.HE.tube.properties_in[:].pressure)
+p_tube_out = pe.value(m.fs.HE.tube.properties_out[:].pressure)
+
 m_shell_in = pe.value(m.fs.HE.shell.properties_in[:].flow_mass)
 m_shell_out = pe.value(m.fs.HE.shell.properties_out[:].flow_mass)
 
@@ -206,18 +221,16 @@ flow_c_cold = pe.value(m.fs.HE.flow_coefficient_cold_side[:])
 print(f'Flow coefficient hot: {flow_c_hot[0]}')
 print(f'Flow coefficient cold: {flow_c_cold[0]}')
 
-ax[0].plot(time, m_tube_in, label='SCO2 in')
-ax[0].plot(time, m_tube_out, label='SCO2 out')
-ax[0].set_title('Mass flow')
+ax[0].plot(time, m_tube_in, label='Mass SCO2 in')
+ax[0].plot(time, m_tube_out, label='Mass SCO2 out')
 ax[0].legend()
 
-ax[1].plot(time, m_tube_in, label='SCO2 in')
-ax[1].plot(time, m_tube_out, label='SCO2 out')
-ax[1].set_xlabel('Time (s)')
+#ax[1].plot(time, p_tube_in, label='Pressure SCO2 in')
+ax[1].plot(time, p_tube_out, label='Pressure SCO2 out')
 ax[1].legend()
 
-ax[2].plot(time, flow_c_hot, label='Flow C Hot')
-ax[2].plot(time, flow_c_cold, label='Flow C Cold')
+ax[2].plot(time, m_shell_in, label='Mass Air in')
+ax[2].plot(time, m_shell_out, label='Mass Air out')
 ax[2].set_xlabel('Time (s)')
 ax[2].legend()
 
