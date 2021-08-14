@@ -135,8 +135,11 @@ class TubeSurrogate(Feed):
             return b.f_tube[t] == \
                    8 * ((8.0 / b.N_Re_tube[t]) ** 12 + \
                         1.0 / ((2.456 * log(
-                        1.0 / ((7.0 / b.N_Re_tube[t]) ** 0.9 + 0.27 * b.pipe_roughness / b.tube_hydraulic_diameter))) ** 16 \
-                               + (37530 / b.N_Re_tube[t]) ** 16) ** 1.5) ** (1 / 12)
+                        1.0 / ((7.0 / b.N_Re_tube[t]) ** 0.9 + 0.27 *
+                               b.pipe_roughness / b.tube_hydraulic_diameter
+                               ))) ** 16 \
+                               + (37530 / b.N_Re_tube[t]) ** 16) ** 1.5) ** \
+                   (1 / 12)
 
     def use_blasius(self):
 
