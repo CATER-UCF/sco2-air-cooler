@@ -94,7 +94,7 @@ def make_model():
         "cold_side_name": "shell",
         "hot_side_name": "tube",
         "shell": {"property_package": m.fs.prop_fluegas,
-                  "has_pressure_change": True},
+                  "has_pressure_change": False},
         "tube": {"property_package": m.fs.prop_sco2,
                  "has_pressure_change": True},
         "flow_pattern": HeatExchangerFlowPattern.crossflow,

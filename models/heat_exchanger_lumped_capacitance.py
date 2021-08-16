@@ -121,23 +121,26 @@ class HeatExchangerLumpedCapacitance(HeatExchanger):
         self.dTdt[t0].fix(0)
 
     def add_pressure_flow_constraints(self):
-        @self.Constraint(
-            self.flowsheet().time,
-            doc='A simple relation for flow and dP'
-        )
-        def flow_coefficient_hot_eq(b, t):
-            return b.hot_side.deltaP[t] == \
-                   -b.flow_coefficient_hot_side[t] * \
-                   b.hot_side.properties_in[t].flow_mass
 
-        @self.Constraint(
-            self.flowsheet().time,
-            doc='A simple relation for flow and dP'
-        )
-        def flow_coefficient_cold_eq(b, t):
-            return b.cold_side.deltaP[t] == \
-                   -b.flow_coefficient_cold_side[t] * \
-                   b.cold_side.properties_in[t].flow_mass
+        if self.config.hot_side_config.has_pressure_change:
+            @self.Constraint(
+                self.flowsheet().time,
+                doc='A simple relation for flow and dP'
+            )
+            def flow_coefficient_hot_eq(b, t):
+                return b.hot_side.deltaP[t] == \
+                       -b.flow_coefficient_hot_side[t] * \
+                       b.hot_side.properties_in[t].flow_mass
+
+        if self.config.cold_side_config.has_pressure_change:
+            @self.Constraint(
+                self.flowsheet().time,
+                doc='A simple relation for flow and dP'
+            )
+            def flow_coefficient_cold_eq(b, t):
+                return b.cold_side.deltaP[t] == \
+                       -b.flow_coefficient_cold_side[t] * \
+                       b.cold_side.properties_in[t].flow_mass
 
     def activate_dynamic_heat_eq(self):
         self.unit_heat_balance.deactivate()

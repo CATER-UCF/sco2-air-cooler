@@ -26,7 +26,7 @@ df = df[df['temperature'] > 299]
 
 def kernel(x, a0, a1, a2, a3):
     """
-    hconv = a0 + a1 * cp_mol ** a2 + a3 * pressure
+    hconv = a0 + a1 * cp_mol ** a2 + a3 * cp_mol
     """
     return a0 + a1 * x[0] ** a2 + a3 * x[0]
 
