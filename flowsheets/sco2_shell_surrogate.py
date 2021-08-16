@@ -1,11 +1,8 @@
 """
 Flowsheet for generating a surrogate model of hconv and dP as functions of
 fluid state.
-
-Work in progress...
 """
 import numpy as np
-import matplotlib.pyplot as plt
 import pyomo.environ as pe
 from idaes.core import FlowsheetBlock
 from idaes.power_generation.properties import FlueGasParameterBlock
@@ -65,6 +62,12 @@ def run_doe(npr, nt):
     p_min = 101325 * 0.9
     p_max = 101325 * 1.1
 
+    temp, press = np.meshgrid(np.linspace(t_min, t_max, nt),
+                              np.linspace(p_min, p_max, npr))
+
+    temp = temp.flatten()
+    press = press.flatten()
+
     solver = pe.SolverFactory('ipopt')
     solver.options = {
         "tol": 1e-6,
@@ -73,11 +76,21 @@ def run_doe(npr, nt):
     }
 
     shell_flow = 44004.14222
-    m = make_model(288.15, 101325, shell_flow, dyn=False)
+    m = make_model(288.15, 101325, shell_flow, dyn=True, n_pts=nt*npr)
+
+    for i, t in enumerate(m.fs.time):
+        m.fs.feed.outlet.temperature[t].fix(temp[i])
+        m.fs.feed.outlet.pressure[t].fix(press[i])
+
     m.fs.feed.initialize()
     solver.solve(m, tee=True)
-    Re = pe.value(m.fs.feed.N_Re_air[0])
-    print(f'Re: {Re}')
+    Re = pe.value(m.fs.feed.N_Re_air[:])
+    hconv = pe.value(m.fs.feed.hconv_air[:])
+    v_in = pe.value(m.fs.feed.v_in[:])
+    v_max = pe.value(m.fs.feed.v_max[:])
+
+    print(f'Re: {Re[0]}')
+    print(f'hconv: {hconv[0]}')
 
     hd = pe.value(m.fs.feed.air_hydraulic_diameter)
     print(f'HD: {hd}')
@@ -101,8 +114,22 @@ def run_doe(npr, nt):
     l_flow = pe.value(m.fs.feed.flow_length)
     print(f'Flow length: {l_flow}')
 
-    #m.fs.feed.display()
+    fin_area = pe.value(m.fs.feed.fin_surface_area)
+    tube_area = pe.value(m.fs.feed.tube_surface_area)
+
+    print(f'Fin area: {fin_area}')
+    print(f'Tube area: {tube_area}')
+
+    df = pd.DataFrame(data={
+        'temperature': temp,
+        'pressure': press,
+        'Re': np.array(Re),
+        'hconv': np.array(hconv),
+        'v_in': np.array(v_in),
+        'v_max': np.array(v_max)
+    })
+    df.to_csv(f'./data/DOE_air_p{npr}_t{nt}.csv', index=None)
 
 
 if __name__ == '__main__':
-    run_doe(30, 99)
+    run_doe(20, 20)

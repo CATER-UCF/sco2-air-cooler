@@ -6,9 +6,14 @@ import math
 class ShellSurrogate(Feed):
     """
     Extension of the IDAES Feed unit model. Used to calculate hconv and dP
-    as functions of flow and property states.
+    as functions of flow and property states. Since the air flow is laminar,
+    however, there is no need to model the pressure drop. We can use:
 
-    Work in progress...
+    Nu = 3.66
+    hconv = Nu * k / l
+
+    Since thermal conductivity is not a strong function of pressure, we can
+    model hconv as a function of temperature only.
     """
     def add_geometry(self):
 
@@ -110,13 +115,19 @@ class ShellSurrogate(Feed):
             initialize=100.,
             doc='Reynolds number'
         )
+        self.hconv_air = Var(
+            self.flowsheet().config.time,
+            initialize=100.,
+            doc='Heat transfer coefficient'
+        )
 
         @self.Constraint(
             self.flowsheet().config.time
         )
         def v_in_eq(b, t):
             return b.v_in[t] * b.area_in * \
-                   b.properties[t].dens_mol_phase['Vap'] == b.properties[t].flow_mol
+                   b.properties[t].dens_mol_phase['Vap'] == \
+                   b.properties[t].flow_mol
 
         @self.Constraint(
             self.flowsheet().config.time
@@ -130,7 +141,8 @@ class ShellSurrogate(Feed):
         def mw_air_eqn(b, t):
             return b.mw_air[t] == sum(b.properties[t].mw_comp[j] *
                                       b.properties[t].mole_frac_comp[j]
-                                      for j in b.properties[t].params.component_list)
+                                      for j in
+                                      b.properties[t].params.component_list)
 
         @self.Constraint(
             self.flowsheet().config.time
@@ -141,3 +153,10 @@ class ShellSurrogate(Feed):
                    b.air_hydraulic_diameter * b.v_max[t] * \
                    b.properties[t].dens_mol_phase['Vap'] * \
                    b.mw_air[t]
+
+        @self.Constraint(
+            self.flowsheet().config.time
+        )
+        def hconv_air_eqn(b, t):
+            return b.hconv_air[t] == 3.66 * b.properties[t].therm_cond /\
+                   b.air_hydraulic_diameter

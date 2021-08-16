@@ -20,7 +20,7 @@ def set_boundary_conditions(m):
     tube_flow = 13896.84163
 
     shell_area = 690073.9153
-    shell_HTC = 30
+    shell_HTC = 22
 
     tube_area = 19542.2771
     tube_HTC = 1000
