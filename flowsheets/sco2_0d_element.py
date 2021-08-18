@@ -7,7 +7,7 @@ from idaes.generic_models.unit_models.heat_exchanger import delta_temperature_lm
 from idaes.generic_models.properties import swco2
 from idaes.power_generation.properties import FlueGasParameterBlock
 from util import print_results_0d
-from models import HeatExchangerFinnedTube
+from models import HeatExchangerElement
 
 
 def set_boundary_conditions(m):
@@ -16,35 +16,25 @@ def set_boundary_conditions(m):
     shell_flow = 44004.14222
     tube_inlet_temperature = 384.35
     tube_inlet_pressure = 7751362.5
-    tube_outlet_pressure = 7599209 #7542209 #7599375
     tube_flow = 13896.84163
 
     shell_area = 690073.9153
-    shell_HTC = 30
-
-    #tube_area = 19542.2771
-    #tube_HTC = 3000
-
+    tube_area = 19542.2771
     tube_mass = 1160 * 322
+
+    m.fs.HE.tube_length = 195
+    m.fs.HE.internal_surface_area = tube_area
+    m.fs.HE.external_surface_area = shell_area
 
     m.fs.HE.crossflow_factor.fix(0.8)
     m.fs.HE.area.fix(1)
-    m.fs.HE.UA_cold_side[:].fix(shell_area * shell_HTC)
-
     m.fs.HE.heat_capacity = tube_mass * 466
-
-    m.fs.HE.tube_inner_perimeter = 0.0275 * 3.14159
-    m.fs.HE.tube_length = 195
-    m.fs.HE.number_of_tubes = 1160
-    m.fs.HE.tube_hydraulic_diameter = 0.0275
-    m.fs.HE.tube_flow_area = 3.14159 * (0.0275 / 2) ** 2
 
     tube_inlet_enthalpy = swco2.htpx(T=tube_inlet_temperature * pe.units.K, P=tube_inlet_pressure * pe.units.Pa)
 
     m.fs.HE.tube_inlet.flow_mol[:].fix(tube_flow)
     m.fs.HE.tube_inlet.pressure[:].fix(tube_inlet_pressure)
     m.fs.HE.tube_inlet.enth_mol[:].fix(tube_inlet_enthalpy)
-    m.fs.HE.tube_outlet.pressure[:].fix(tube_outlet_pressure)
 
     m.fs.HE.shell_inlet.flow_mol_comp[:, "H2O"].fix(0.01027 * shell_flow)
     m.fs.HE.shell_inlet.flow_mol_comp[:, "CO2"].fix(0.000411592 * shell_flow)
@@ -54,7 +44,10 @@ def set_boundary_conditions(m):
     m.fs.HE.shell_inlet.flow_mol_comp[:, "SO2"].fix(0)
     m.fs.HE.shell_inlet.temperature[:].fix(shell_inlet_temperature)
     m.fs.HE.shell_inlet.pressure[:].fix(101325)
-    m.fs.HE.shell_outlet.pressure[:].fix(101325 * 0.95)
+
+    m.fs.HE.tube_outlet[:].enth_mol.setub(tube_inlet_enthalpy)
+    m.fs.HE.shell_outlet.temperature[:].setlb(shell_inlet_temperature)
+
     return m
 
 
@@ -68,24 +61,21 @@ def make_model():
     m.fs.prop_sco2 = swco2.SWCO2ParameterBlock()
     m.fs.prop_fluegas = FlueGasParameterBlock()
 
-    m.fs.HE = HeatExchangerFinnedTube(default={
+    m.fs.HE = HeatExchangerElement(default={
         "delta_temperature_callback": delta_temperature_lmtd_callback,
         "cold_side_name": "shell",
         "hot_side_name": "tube",
         "shell": {"property_package": m.fs.prop_fluegas,
-                  "has_pressure_change": True},
+                  "has_pressure_change": False},
         "tube": {"property_package": m.fs.prop_sco2,
                  "has_pressure_change": True},
         "flow_pattern": HeatExchangerFlowPattern.crossflow,
         "dynamic": False})
 
-    m.fs.HE.add_dynamic_variables()
-    m.fs.HE.add_dynamic_variable_constraints()
-    m.fs.HE.add_geometry()
-    m.fs.HE.add_hconv_eqs()
-
+    m.fs.HE.setup()
+    m.fs.HE.activate_dynamic_heat_eq()
     m.discretizer = pe.TransformationFactory('dae.finite_difference')
-    m.discretizer.apply_to(m, nfe=500, wrt=m.fs.time, scheme="BACKWARD")
+    m.discretizer.apply_to(m, nfe=100, wrt=m.fs.time, scheme="BACKWARD")
 
     return set_boundary_conditions(m)
 
@@ -96,6 +86,7 @@ Example 1: Steady-state
 m = make_model()
 m.fs.model_check()
 print('Initializing steady-state model...')
+
 m.fs.HE.initialize()
 
 solver = pe.SolverFactory('ipopt')
@@ -104,39 +95,17 @@ solver.options = {
             "linear_solver": "ma27",
             "max_iter": 500,
         }
-print('Solving steady-state model with fixed dP...')
 solver.solve(m, tee=True)
 
 print('')
-print('Steady-state results (fixed dP):')
-print('++++++++++++++++++++++++++++++++')
+print('Steady-state results:')
+print('+++++++++++++++++++++')
 print('')
 print_results_0d(m.fs.HE)
 
-print('')
-t_wall = pe.value(m.fs.HE.wall_temperature[0])
-print(f'T wall: {t_wall}')
-print('')
-
-
-#m.fs.HE.tube_outlet.pressure[:].unfix()
-#m.fs.HE.add_dP_eqs()
-
-print('Solving with HTC and pressure loss equations...')
-solver.solve(m, tee=True)
-
-print('')
-print('Steady-state results (unfixed dP):')
-print('++++++++++++++++++++++++++++++++++')
-print('')
-print_results_0d(m.fs.HE)
-
-print('')
 t_wall = pe.value(m.fs.HE.wall_temperature[0])
 print(f'T wall: {t_wall}')
 
-
-m.fs.HE.activate_dynamic_heat_eq()
 for t in m.fs.time:
     if t >= 300 and t < 600:
         m.fs.HE.shell_inlet.temperature[t].fix(288.15 - 10)
@@ -147,7 +116,6 @@ for t in m.fs.time:
     elif t >= 1200:
         m.fs.HE.shell_inlet.temperature[t].fix(288.15)
 
-print('Solving transient model...')
 solver.solve(m, tee=True)
 
 print('')
@@ -182,10 +150,18 @@ plt.legend()
 plt.show()
 
 
-plt.plot(time, t_tube_out, label='t tube out')
-plt.xlabel('Time (s)')
-plt.ylabel('Temperature (K)')
-plt.legend()
+fig, ax = plt.subplots(2, 1)
+
+ax[0].plot(time, t_tube_out, c='b', label='CO2 Exit')
+ax[0].set_ylabel('Temperature (K)')
+ax[0].set_title('Transient Response')
+ax[0].legend()
+
+ax[1].plot(time, t_shell_in, c='r', label='Air Inlet')
+ax[1].set_xlabel('Time (s)')
+ax[1].set_ylabel('Temperature (K)')
+ax[1].legend()
+
 plt.show()
 
 
@@ -193,17 +169,36 @@ rho_tube_out = pe.value(m.fs.HE.tube.properties_out[:].dens_mass)
 plt.plot(time, rho_tube_out, label='Rho tube out')
 plt.xlabel('Time (s)')
 plt.ylabel('Density (kg/m3)')
+plt.title('Dynamic Model - Density')
 plt.legend()
-plt.show()
 
 
-hconv_tube_in = pe.value(m.fs.HE.H_tube_in[:])
-hconv_tube_out = pe.value(m.fs.HE.H_tube_out[:])
+fig, ax = plt.subplots(3, 1)
 
-plt.plot(time, hconv_tube_in, label='HTC in')
-plt.plot(time, hconv_tube_out, label='HTC out')
+m_tube_in = pe.value(m.fs.HE.tube.properties_in[:].flow_mass)
+m_tube_out = pe.value(m.fs.HE.tube.properties_out[:].flow_mass)
+m_shell_in = pe.value(m.fs.HE.shell.properties_in[:].flow_mass)
+m_shell_out = pe.value(m.fs.HE.shell.properties_out[:].flow_mass)
 
-plt.xlabel('Time (s)')
-plt.ylabel('HTC (W / m^2 K)')
-plt.legend()
+flow_c_hot = pe.value(m.fs.HE.flow_coefficient_hot_side[:])
+flow_c_cold = pe.value(m.fs.HE.flow_coefficient_cold_side[:])
+
+print(f'Flow coefficient hot: {flow_c_hot[0]}')
+print(f'Flow coefficient cold: {flow_c_cold[0]}')
+
+ax[0].plot(time, m_tube_in, label='SCO2 in')
+ax[0].plot(time, m_tube_out, label='SCO2 out')
+ax[0].set_title('Mass flow')
+ax[0].legend()
+
+ax[1].plot(time, m_tube_in, label='SCO2 in')
+ax[1].plot(time, m_tube_out, label='SCO2 out')
+ax[1].set_xlabel('Time (s)')
+ax[1].legend()
+
+ax[2].plot(time, flow_c_hot, label='Flow C Hot')
+ax[2].plot(time, flow_c_cold, label='Flow C Cold')
+ax[2].set_xlabel('Time (s)')
+ax[2].legend()
+
 plt.show()

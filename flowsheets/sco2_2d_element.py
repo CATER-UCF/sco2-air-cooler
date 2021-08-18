@@ -1,5 +1,5 @@
 """
-Two-dimensional model of a countercurrent, crossflow heat exchanger.
+...
 """
 
 import numpy as np
@@ -13,7 +13,7 @@ from idaes.generic_models.properties import swco2
 from idaes.power_generation.properties import FlueGasParameterBlock
 import idaes.logger
 from util import print_results_0d
-from models import HeatExchangerFinnedTube
+from models import HeatExchangerElement
 
 
 logger = idaes.logger.getLogger('idaes')
@@ -34,14 +34,14 @@ m.fs.es = []
 
 logger.info('Adding heat exchanger elements...')
 for _ in range(n_elements):
-    m.fs.es.append(HeatExchangerFinnedTube(default={
+    m.fs.es.append(HeatExchangerElement(default={
         "delta_temperature_callback": delta_temperature_lmtd_callback,
         "cold_side_name": "shell",
         "hot_side_name": "tube",
         "shell": {"property_package": m.fs.prop_fluegas,
                   "has_pressure_change": False},
         "tube": {"property_package": m.fs.prop_sco2,
-                 "has_pressure_change": True},
+                 "has_pressure_change": False},
         "flow_pattern": HeatExchangerFlowPattern.crossflow,
         "dynamic": False}))
 
@@ -120,10 +120,7 @@ tube_out_element = m.fs.e55
 
 logger.info('Adding dynamic variables and constraints...')
 for e in all_elements:
-    e.add_dynamic_variables()
-    e.add_dynamic_variable_constraints()
-    e.add_geometry()
-    e.add_hconv_eqs()
+    e.setup()
 
 logger.info('Applying time-discretization...')
 m.discretizer = pe.TransformationFactory('dae.finite_difference')
@@ -137,10 +134,7 @@ tube_outlet_pressure = 7599375
 tube_flow = 13896.84163
 
 shell_area = 690073.9153
-shell_HTC = 30
-
 tube_area = 19542.2771
-tube_HTC = 4000
 
 tube_mass = 1160 * 322
 
@@ -149,14 +143,9 @@ logger.info('Applying constraints...')
 for e in all_elements:
     e.crossflow_factor.fix(0.8)
     e.area.fix(1)
-    e.UA_cold_side[:].fix(shell_area * shell_HTC / n_elements)
-
-    e.tube_inner_perimeter = 0.0275 * 3.14159
     e.tube_length = 195 / n_elements
-    e.number_of_tubes = 1160
-    e.tube_hydraulic_diameter = 0.0275
-    e.tube_flow_area = 3.14159 * (0.0275 / 2) ** 2
-
+    e.internal_surface_area = tube_area / n_elements
+    e.external_surface_area = shell_area / n_elements
     e.heat_capacity = tube_mass * 466 / n_elements
 
 tube_inlet_enthalpy = swco2.htpx(T=tube_inlet_temperature * pe.units.K, P=tube_inlet_pressure * pe.units.Pa)
@@ -210,13 +199,6 @@ for e in all_elements:
 fix_tube_inlet(tube_in_element)
 for e in shell_in_elements:
     fix_shell_inlet(e)
-
-# Tube-side pressure loss
-tube_dp = (tube_outlet_pressure - tube_inlet_pressure) / n_elements
-tube_p = tube_inlet_pressure
-for idx, e in enumerate(all_elements):
-    tube_p += tube_dp
-    e.tube_outlet.pressure[:].fix(tube_p)
 
 
 logger.info('Adding Arcs for 2D flow network...')
@@ -356,9 +338,6 @@ solver.options = {
 logger.info('Solving model with steady state conditions...')
 solver.solve(m, tee=True)
 
-for e in all_elements:
-    e.activate_dynamic_heat_eq()
-
 # Adding temperature disturbances
 for e in shell_in_elements:
     for t in m.fs.time:
@@ -395,18 +374,6 @@ for idx, e in enumerate(all_elements):
 
 print('')
 print(f'Total heat duty (t=600): {hd}')
-print('')
-
-print('Tube HTCs (t=0):')
-for i, e in enumerate(all_elements):
-    HTC_in = pe.value(e.H_tube_in[0])
-    HTC_out = pe.value(e.H_tube_out[0])
-
-    print(f'Element #: {i}:')
-    print(f'H tube in: {HTC_in}')
-    print(f'H tube out: {HTC_out}')
-    print(f'')
-
 
 res = []
 for e in all_elements:
@@ -479,23 +446,5 @@ fig, ax = plt.subplots(1)
 ax.plot(time, t_out)
 ax.set_xlabel('Time (s)')
 ax.set_ylabel('CO2 Exit Temperature (K)')
-
-rho_out = pe.value(tube_out_element.tube.properties_out[:].dens_mass)
-time = [t for t in m.fs.time]
-
-fig, ax = plt.subplots(1)
-ax.plot(time, rho_out)
-ax.set_xlabel('Time (s)')
-ax.set_ylabel('CO2 Exit Density (kg/m^3)')
-
-plt.show()
-
-p_out = pe.value(tube_out_element.tube.properties_out[:].pressure)
-time = [t for t in m.fs.time]
-
-fig, ax = plt.subplots(1)
-ax.plot(time, p_out)
-ax.set_xlabel('Time (s)')
-ax.set_ylabel('CO2 Exit Pressure (Pa)')
 
 plt.show()

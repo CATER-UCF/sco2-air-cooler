@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import pyomo.environ as pe
 from idaes.core import FlowsheetBlock
 from idaes.generic_models.unit_models import HeatExchanger, HeatExchangerFlowPattern
-from idaes.generic_models.unit_models.heat_exchanger import delta_temperature_amtd_callback
+from idaes.generic_models.unit_models.heat_exchanger import delta_temperature_lmtd_callback
 from idaes.generic_models.properties import swco2
 from idaes.power_generation.properties import FlueGasParameterBlock
 from util import print_results_0d
@@ -13,19 +13,19 @@ from models import HeatExchangerLumpedCapacitance
 def set_boundary_conditions(m):
 
     shell_inlet_temperature = 288.15
-    shell_flow = 44004.14222
+    shell_flow = 44004.14222 / 56
     tube_inlet_temperature = 384.35
     tube_inlet_pressure = 7751362.5
     tube_outlet_pressure = 7599375
-    tube_flow = 13896.84163
+    tube_flow = 13896.84163 / 56
 
-    shell_area = 690073.9153
+    shell_area = 690073.9153 / 56
     shell_HTC = 22
 
-    tube_area = 19542.2771
+    tube_area = 19542.2771 / 56
     tube_HTC = 1000
 
-    tube_mass = 1160 * 322
+    tube_mass = 1160 * 322 / 56
 
     m.fs.HE.crossflow_factor.fix(0.8)
     m.fs.HE.area.fix(1)
@@ -67,7 +67,7 @@ def make_model():
     m.fs.prop_fluegas = FlueGasParameterBlock()
 
     m.fs.HE = HeatExchangerLumpedCapacitance(default={
-        "delta_temperature_callback": delta_temperature_amtd_callback,
+        "delta_temperature_callback": delta_temperature_lmtd_callback,
         "cold_side_name": "shell",
         "hot_side_name": "tube",
         "shell": {"property_package": m.fs.prop_fluegas,

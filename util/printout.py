@@ -19,6 +19,9 @@ def print_results_0d(e, t=0):
     heat_duty = pe.value(e.heat_duty[t])
     UA = pe.value(e.overall_heat_transfer_coefficient[t])
 
+    crossflow_P = (t_tube_out - t_tube_in) / (t_shell_in - t_tube_in)
+    crossflow_R = (t_shell_in - t_shell_out) / (t_tube_out - t_tube_in)
+
     print('--------Tube-----------'
           '')
     print('')
@@ -41,5 +44,8 @@ def print_results_0d(e, t=0):
     print('')
     print(f'Overall HTC: {UA}')
     print(f'Heat duty (MW): {heat_duty * 1e-6}')
+    print('')
+    print(f'Crossflow R: {crossflow_R}')
+    print(f'Crossflow P: {crossflow_P}')
 
     return heat_duty * 1e-6
