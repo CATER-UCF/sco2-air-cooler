@@ -13,6 +13,7 @@ class HeatExchangerElement(HeatExchangerLumpedCapacitance):
         self.add_pressure_flow_constraints()
         self.add_surrogate_constraints()
         self.add_UA_and_flow_coefficient_constraints()
+        self.activate_dynamic_heat_eq()
 
     def add_surrogate_constraints(self):
 

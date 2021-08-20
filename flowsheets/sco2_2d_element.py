@@ -14,7 +14,7 @@ from idaes.power_generation.properties import FlueGasParameterBlock
 import idaes.logger
 from util import print_results_0d
 from models import HeatExchangerElement
-
+from flowsheets.code_gen import code_gen
 
 logger = idaes.logger.getLogger('idaes')
 
@@ -45,78 +45,15 @@ for _ in range(n_elements):
         "flow_pattern": HeatExchangerFlowPattern.crossflow,
         "dynamic": False}))
 
-# Paste codgen setup code block here:
-m.fs.e0 = m.fs.es[0]
-m.fs.e1 = m.fs.es[1]
-m.fs.e2 = m.fs.es[2]
-m.fs.e3 = m.fs.es[3]
-m.fs.e4 = m.fs.es[4]
-m.fs.e5 = m.fs.es[5]
-m.fs.e6 = m.fs.es[6]
-m.fs.e7 = m.fs.es[7]
-m.fs.e8 = m.fs.es[8]
-m.fs.e9 = m.fs.es[9]
-m.fs.e10 = m.fs.es[10]
-m.fs.e11 = m.fs.es[11]
-m.fs.e12 = m.fs.es[12]
-m.fs.e13 = m.fs.es[13]
-m.fs.e14 = m.fs.es[14]
-m.fs.e15 = m.fs.es[15]
-m.fs.e16 = m.fs.es[16]
-m.fs.e17 = m.fs.es[17]
-m.fs.e18 = m.fs.es[18]
-m.fs.e19 = m.fs.es[19]
-m.fs.e20 = m.fs.es[20]
-m.fs.e21 = m.fs.es[21]
-m.fs.e22 = m.fs.es[22]
-m.fs.e23 = m.fs.es[23]
-m.fs.e24 = m.fs.es[24]
-m.fs.e25 = m.fs.es[25]
-m.fs.e26 = m.fs.es[26]
-m.fs.e27 = m.fs.es[27]
-m.fs.e28 = m.fs.es[28]
-m.fs.e29 = m.fs.es[29]
-m.fs.e30 = m.fs.es[30]
-m.fs.e31 = m.fs.es[31]
-m.fs.e32 = m.fs.es[32]
-m.fs.e33 = m.fs.es[33]
-m.fs.e34 = m.fs.es[34]
-m.fs.e35 = m.fs.es[35]
-m.fs.e36 = m.fs.es[36]
-m.fs.e37 = m.fs.es[37]
-m.fs.e38 = m.fs.es[38]
-m.fs.e39 = m.fs.es[39]
-m.fs.e40 = m.fs.es[40]
-m.fs.e41 = m.fs.es[41]
-m.fs.e42 = m.fs.es[42]
-m.fs.e43 = m.fs.es[43]
-m.fs.e44 = m.fs.es[44]
-m.fs.e45 = m.fs.es[45]
-m.fs.e46 = m.fs.es[46]
-m.fs.e47 = m.fs.es[47]
-m.fs.e48 = m.fs.es[48]
-m.fs.e49 = m.fs.es[49]
-m.fs.e50 = m.fs.es[50]
-m.fs.e51 = m.fs.es[51]
-m.fs.e52 = m.fs.es[52]
-m.fs.e53 = m.fs.es[53]
-m.fs.e54 = m.fs.es[54]
-m.fs.e55 = m.fs.es[55]
 
-all_elements = [m.fs.e0, m.fs.e1, m.fs.e2, m.fs.e3, m.fs.e4, m.fs.e5, m.fs.e6,
-    m.fs.e7, m.fs.e8, m.fs.e9, m.fs.e10, m.fs.e11, m.fs.e12, m.fs.e13,
-    m.fs.e14, m.fs.e15, m.fs.e16, m.fs.e17, m.fs.e18, m.fs.e19, m.fs.e20,
-    m.fs.e21, m.fs.e22, m.fs.e23, m.fs.e24, m.fs.e25, m.fs.e26, m.fs.e27,
-    m.fs.e28, m.fs.e29, m.fs.e30, m.fs.e31, m.fs.e32, m.fs.e33, m.fs.e34,
-    m.fs.e35, m.fs.e36, m.fs.e37, m.fs.e38, m.fs.e39, m.fs.e40, m.fs.e41,
-    m.fs.e42, m.fs.e43, m.fs.e44, m.fs.e45, m.fs.e46, m.fs.e47, m.fs.e48,
-    m.fs.e49, m.fs.e50, m.fs.e51, m.fs.e52, m.fs.e53, m.fs.e54, m.fs.e55]
+all_elements = None
+tube_in_element = None
+tube_out_element = None
+shell_in_elements = None
 
-shell_in_elements = [m.fs.e49, m.fs.e50, m.fs.e51, m.fs.e52, m.fs.e53,
-    m.fs.e54, m.fs.e55]
+setup_block, arc_block = code_gen(n_passes, n_elements_per_pass, mixing=False)
 
-tube_in_element = m.fs.e0
-tube_out_element = m.fs.e55
+exec(setup_block)
 
 logger.info('Adding dynamic variables and constraints...')
 for e in all_elements:
@@ -141,7 +78,7 @@ tube_mass = 1160 * 322
 logger.info('Applying constraints...')
 # Fix the heat transfer parameters in every element
 for e in all_elements:
-    e.crossflow_factor.fix(0.8)
+    e.crossflow_factor.fix(1)
     e.area.fix(1)
     e.tube_length = 195 / n_elements
     e.internal_surface_area = tube_area / n_elements
@@ -203,127 +140,7 @@ for e in shell_in_elements:
 
 logger.info('Adding Arcs for 2D flow network...')
 
-# Paste codgen arc code block here:
-
-# Add tube-side Arcs
-m.fs.e_tube_Arc0 = Arc(source=m.fs.e0.outlet_1, destination=m.fs.e1.inlet_1)
-m.fs.e_tube_Arc1 = Arc(source=m.fs.e1.outlet_1, destination=m.fs.e2.inlet_1)
-m.fs.e_tube_Arc2 = Arc(source=m.fs.e2.outlet_1, destination=m.fs.e3.inlet_1)
-m.fs.e_tube_Arc3 = Arc(source=m.fs.e3.outlet_1, destination=m.fs.e4.inlet_1)
-m.fs.e_tube_Arc4 = Arc(source=m.fs.e4.outlet_1, destination=m.fs.e5.inlet_1)
-m.fs.e_tube_Arc5 = Arc(source=m.fs.e5.outlet_1, destination=m.fs.e6.inlet_1)
-m.fs.e_tube_Arc6 = Arc(source=m.fs.e6.outlet_1, destination=m.fs.e7.inlet_1)
-m.fs.e_tube_Arc7 = Arc(source=m.fs.e7.outlet_1, destination=m.fs.e8.inlet_1)
-m.fs.e_tube_Arc8 = Arc(source=m.fs.e8.outlet_1, destination=m.fs.e9.inlet_1)
-m.fs.e_tube_Arc9 = Arc(source=m.fs.e9.outlet_1, destination=m.fs.e10.inlet_1)
-m.fs.e_tube_Arc10 = Arc(source=m.fs.e10.outlet_1, destination=m.fs.e11.inlet_1)
-m.fs.e_tube_Arc11 = Arc(source=m.fs.e11.outlet_1, destination=m.fs.e12.inlet_1)
-m.fs.e_tube_Arc12 = Arc(source=m.fs.e12.outlet_1, destination=m.fs.e13.inlet_1)
-m.fs.e_tube_Arc13 = Arc(source=m.fs.e13.outlet_1, destination=m.fs.e14.inlet_1)
-m.fs.e_tube_Arc14 = Arc(source=m.fs.e14.outlet_1, destination=m.fs.e15.inlet_1)
-m.fs.e_tube_Arc15 = Arc(source=m.fs.e15.outlet_1, destination=m.fs.e16.inlet_1)
-m.fs.e_tube_Arc16 = Arc(source=m.fs.e16.outlet_1, destination=m.fs.e17.inlet_1)
-m.fs.e_tube_Arc17 = Arc(source=m.fs.e17.outlet_1, destination=m.fs.e18.inlet_1)
-m.fs.e_tube_Arc18 = Arc(source=m.fs.e18.outlet_1, destination=m.fs.e19.inlet_1)
-m.fs.e_tube_Arc19 = Arc(source=m.fs.e19.outlet_1, destination=m.fs.e20.inlet_1)
-m.fs.e_tube_Arc20 = Arc(source=m.fs.e20.outlet_1, destination=m.fs.e21.inlet_1)
-m.fs.e_tube_Arc21 = Arc(source=m.fs.e21.outlet_1, destination=m.fs.e22.inlet_1)
-m.fs.e_tube_Arc22 = Arc(source=m.fs.e22.outlet_1, destination=m.fs.e23.inlet_1)
-m.fs.e_tube_Arc23 = Arc(source=m.fs.e23.outlet_1, destination=m.fs.e24.inlet_1)
-m.fs.e_tube_Arc24 = Arc(source=m.fs.e24.outlet_1, destination=m.fs.e25.inlet_1)
-m.fs.e_tube_Arc25 = Arc(source=m.fs.e25.outlet_1, destination=m.fs.e26.inlet_1)
-m.fs.e_tube_Arc26 = Arc(source=m.fs.e26.outlet_1, destination=m.fs.e27.inlet_1)
-m.fs.e_tube_Arc27 = Arc(source=m.fs.e27.outlet_1, destination=m.fs.e28.inlet_1)
-m.fs.e_tube_Arc28 = Arc(source=m.fs.e28.outlet_1, destination=m.fs.e29.inlet_1)
-m.fs.e_tube_Arc29 = Arc(source=m.fs.e29.outlet_1, destination=m.fs.e30.inlet_1)
-m.fs.e_tube_Arc30 = Arc(source=m.fs.e30.outlet_1, destination=m.fs.e31.inlet_1)
-m.fs.e_tube_Arc31 = Arc(source=m.fs.e31.outlet_1, destination=m.fs.e32.inlet_1)
-m.fs.e_tube_Arc32 = Arc(source=m.fs.e32.outlet_1, destination=m.fs.e33.inlet_1)
-m.fs.e_tube_Arc33 = Arc(source=m.fs.e33.outlet_1, destination=m.fs.e34.inlet_1)
-m.fs.e_tube_Arc34 = Arc(source=m.fs.e34.outlet_1, destination=m.fs.e35.inlet_1)
-m.fs.e_tube_Arc35 = Arc(source=m.fs.e35.outlet_1, destination=m.fs.e36.inlet_1)
-m.fs.e_tube_Arc36 = Arc(source=m.fs.e36.outlet_1, destination=m.fs.e37.inlet_1)
-m.fs.e_tube_Arc37 = Arc(source=m.fs.e37.outlet_1, destination=m.fs.e38.inlet_1)
-m.fs.e_tube_Arc38 = Arc(source=m.fs.e38.outlet_1, destination=m.fs.e39.inlet_1)
-m.fs.e_tube_Arc39 = Arc(source=m.fs.e39.outlet_1, destination=m.fs.e40.inlet_1)
-m.fs.e_tube_Arc40 = Arc(source=m.fs.e40.outlet_1, destination=m.fs.e41.inlet_1)
-m.fs.e_tube_Arc41 = Arc(source=m.fs.e41.outlet_1, destination=m.fs.e42.inlet_1)
-m.fs.e_tube_Arc42 = Arc(source=m.fs.e42.outlet_1, destination=m.fs.e43.inlet_1)
-m.fs.e_tube_Arc43 = Arc(source=m.fs.e43.outlet_1, destination=m.fs.e44.inlet_1)
-m.fs.e_tube_Arc44 = Arc(source=m.fs.e44.outlet_1, destination=m.fs.e45.inlet_1)
-m.fs.e_tube_Arc45 = Arc(source=m.fs.e45.outlet_1, destination=m.fs.e46.inlet_1)
-m.fs.e_tube_Arc46 = Arc(source=m.fs.e46.outlet_1, destination=m.fs.e47.inlet_1)
-m.fs.e_tube_Arc47 = Arc(source=m.fs.e47.outlet_1, destination=m.fs.e48.inlet_1)
-m.fs.e_tube_Arc48 = Arc(source=m.fs.e48.outlet_1, destination=m.fs.e49.inlet_1)
-m.fs.e_tube_Arc49 = Arc(source=m.fs.e49.outlet_1, destination=m.fs.e50.inlet_1)
-m.fs.e_tube_Arc50 = Arc(source=m.fs.e50.outlet_1, destination=m.fs.e51.inlet_1)
-m.fs.e_tube_Arc51 = Arc(source=m.fs.e51.outlet_1, destination=m.fs.e52.inlet_1)
-m.fs.e_tube_Arc52 = Arc(source=m.fs.e52.outlet_1, destination=m.fs.e53.inlet_1)
-m.fs.e_tube_Arc53 = Arc(source=m.fs.e53.outlet_1, destination=m.fs.e54.inlet_1)
-m.fs.e_tube_Arc54 = Arc(source=m.fs.e54.outlet_1, destination=m.fs.e55.inlet_1)
-
-# Shell Arcs for pass 1
-m.fs.e_shell_pass1_m0 = Arc(source=m.fs.e49.outlet_2, destination=m.fs.e48.inlet_2)
-m.fs.e_shell_pass1_m1 = Arc(source=m.fs.e50.outlet_2, destination=m.fs.e47.inlet_2)
-m.fs.e_shell_pass1_m2 = Arc(source=m.fs.e51.outlet_2, destination=m.fs.e46.inlet_2)
-m.fs.e_shell_pass1_m3 = Arc(source=m.fs.e52.outlet_2, destination=m.fs.e45.inlet_2)
-m.fs.e_shell_pass1_m4 = Arc(source=m.fs.e53.outlet_2, destination=m.fs.e44.inlet_2)
-m.fs.e_shell_pass1_m5 = Arc(source=m.fs.e54.outlet_2, destination=m.fs.e43.inlet_2)
-m.fs.e_shell_pass1_m6 = Arc(source=m.fs.e55.outlet_2, destination=m.fs.e42.inlet_2)
-
-# Shell Arcs for pass 2
-m.fs.e_shell_pass2_m0 = Arc(source=m.fs.e42.outlet_2, destination=m.fs.e41.inlet_2)
-m.fs.e_shell_pass2_m1 = Arc(source=m.fs.e43.outlet_2, destination=m.fs.e40.inlet_2)
-m.fs.e_shell_pass2_m2 = Arc(source=m.fs.e44.outlet_2, destination=m.fs.e39.inlet_2)
-m.fs.e_shell_pass2_m3 = Arc(source=m.fs.e45.outlet_2, destination=m.fs.e38.inlet_2)
-m.fs.e_shell_pass2_m4 = Arc(source=m.fs.e46.outlet_2, destination=m.fs.e37.inlet_2)
-m.fs.e_shell_pass2_m5 = Arc(source=m.fs.e47.outlet_2, destination=m.fs.e36.inlet_2)
-m.fs.e_shell_pass2_m6 = Arc(source=m.fs.e48.outlet_2, destination=m.fs.e35.inlet_2)
-
-# Shell Arcs for pass 3
-m.fs.e_shell_pass3_m0 = Arc(source=m.fs.e35.outlet_2, destination=m.fs.e34.inlet_2)
-m.fs.e_shell_pass3_m1 = Arc(source=m.fs.e36.outlet_2, destination=m.fs.e33.inlet_2)
-m.fs.e_shell_pass3_m2 = Arc(source=m.fs.e37.outlet_2, destination=m.fs.e32.inlet_2)
-m.fs.e_shell_pass3_m3 = Arc(source=m.fs.e38.outlet_2, destination=m.fs.e31.inlet_2)
-m.fs.e_shell_pass3_m4 = Arc(source=m.fs.e39.outlet_2, destination=m.fs.e30.inlet_2)
-m.fs.e_shell_pass3_m5 = Arc(source=m.fs.e40.outlet_2, destination=m.fs.e29.inlet_2)
-m.fs.e_shell_pass3_m6 = Arc(source=m.fs.e41.outlet_2, destination=m.fs.e28.inlet_2)
-
-# Shell Arcs for pass 4
-m.fs.e_shell_pass4_m0 = Arc(source=m.fs.e28.outlet_2, destination=m.fs.e27.inlet_2)
-m.fs.e_shell_pass4_m1 = Arc(source=m.fs.e29.outlet_2, destination=m.fs.e26.inlet_2)
-m.fs.e_shell_pass4_m2 = Arc(source=m.fs.e30.outlet_2, destination=m.fs.e25.inlet_2)
-m.fs.e_shell_pass4_m3 = Arc(source=m.fs.e31.outlet_2, destination=m.fs.e24.inlet_2)
-m.fs.e_shell_pass4_m4 = Arc(source=m.fs.e32.outlet_2, destination=m.fs.e23.inlet_2)
-m.fs.e_shell_pass4_m5 = Arc(source=m.fs.e33.outlet_2, destination=m.fs.e22.inlet_2)
-m.fs.e_shell_pass4_m6 = Arc(source=m.fs.e34.outlet_2, destination=m.fs.e21.inlet_2)
-
-# Shell Arcs for pass 5
-m.fs.e_shell_pass5_m0 = Arc(source=m.fs.e21.outlet_2, destination=m.fs.e20.inlet_2)
-m.fs.e_shell_pass5_m1 = Arc(source=m.fs.e22.outlet_2, destination=m.fs.e19.inlet_2)
-m.fs.e_shell_pass5_m2 = Arc(source=m.fs.e23.outlet_2, destination=m.fs.e18.inlet_2)
-m.fs.e_shell_pass5_m3 = Arc(source=m.fs.e24.outlet_2, destination=m.fs.e17.inlet_2)
-m.fs.e_shell_pass5_m4 = Arc(source=m.fs.e25.outlet_2, destination=m.fs.e16.inlet_2)
-m.fs.e_shell_pass5_m5 = Arc(source=m.fs.e26.outlet_2, destination=m.fs.e15.inlet_2)
-m.fs.e_shell_pass5_m6 = Arc(source=m.fs.e27.outlet_2, destination=m.fs.e14.inlet_2)
-
-# Shell Arcs for pass 6
-m.fs.e_shell_pass6_m0 = Arc(source=m.fs.e14.outlet_2, destination=m.fs.e13.inlet_2)
-m.fs.e_shell_pass6_m1 = Arc(source=m.fs.e15.outlet_2, destination=m.fs.e12.inlet_2)
-m.fs.e_shell_pass6_m2 = Arc(source=m.fs.e16.outlet_2, destination=m.fs.e11.inlet_2)
-m.fs.e_shell_pass6_m3 = Arc(source=m.fs.e17.outlet_2, destination=m.fs.e10.inlet_2)
-m.fs.e_shell_pass6_m4 = Arc(source=m.fs.e18.outlet_2, destination=m.fs.e9.inlet_2)
-m.fs.e_shell_pass6_m5 = Arc(source=m.fs.e19.outlet_2, destination=m.fs.e8.inlet_2)
-m.fs.e_shell_pass6_m6 = Arc(source=m.fs.e20.outlet_2, destination=m.fs.e7.inlet_2)
-
-# Shell Arcs for pass 7
-m.fs.e_shell_pass7_m0 = Arc(source=m.fs.e7.outlet_2, destination=m.fs.e6.inlet_2)
-m.fs.e_shell_pass7_m1 = Arc(source=m.fs.e8.outlet_2, destination=m.fs.e5.inlet_2)
-m.fs.e_shell_pass7_m2 = Arc(source=m.fs.e9.outlet_2, destination=m.fs.e4.inlet_2)
-m.fs.e_shell_pass7_m3 = Arc(source=m.fs.e10.outlet_2, destination=m.fs.e3.inlet_2)
-m.fs.e_shell_pass7_m4 = Arc(source=m.fs.e11.outlet_2, destination=m.fs.e2.inlet_2)
-m.fs.e_shell_pass7_m5 = Arc(source=m.fs.e12.outlet_2, destination=m.fs.e1.inlet_2)
-m.fs.e_shell_pass7_m6 = Arc(source=m.fs.e13.outlet_2, destination=m.fs.e0.inlet_2)
+exec(arc_block)
 
 # Apply Arc constraints
 pe.TransformationFactory("network.expand_arcs").apply_to(m.fs)
