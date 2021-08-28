@@ -1,9 +1,8 @@
 """
-...
+Runs the 2D simulation with an arbitrary number of passes and elements per
+pass. Writes results to .csv
 """
 
-import numpy as np
-import matplotlib.pyplot as plt
 import pyomo.environ as pe
 from pyomo.network import Arc
 from idaes.core import FlowsheetBlock
@@ -12,9 +11,20 @@ from idaes.generic_models.unit_models.heat_exchanger import delta_temperature_lm
 from idaes.generic_models.properties import swco2
 from idaes.power_generation.properties import FlueGasParameterBlock
 import idaes.logger
-from util import print_results_0d, write_csv
+from util import write_csv
 from models import HeatExchangerElement
 from flowsheets.code_gen import code_gen
+import argparse
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-p', '--passes', type=int, help='Number of passes')
+parser.add_argument('-e', '--elements', type=int, help='Number of heat exchanger elements per pass')
+
+args = parser.parse_args()
+n_passes = args.passes
+n_elements_per_pass = args.elements
+
 
 logger = idaes.logger.getLogger('idaes')
 
@@ -27,8 +37,6 @@ m.fs = FlowsheetBlock(default={"dynamic": True,
 m.fs.prop_sco2 = swco2.SWCO2ParameterBlock()
 m.fs.prop_fluegas = FlueGasParameterBlock()
 
-n_passes = 1
-n_elements_per_pass = 1
 n_elements = n_passes * n_elements_per_pass
 m.fs.es = []
 
@@ -45,14 +53,11 @@ for _ in range(n_elements):
         "flow_pattern": HeatExchangerFlowPattern.crossflow,
         "dynamic": False}))
 
-
 all_elements = None
 tube_in_element = None
-tube_out_element = None
 shell_in_elements = None
 
 setup_block, arc_block = code_gen(n_passes, n_elements_per_pass, mixing=False)
-
 exec(setup_block)
 
 logger.info('Adding dynamic variables and constraints...')
@@ -61,7 +66,7 @@ for e in all_elements:
 
 logger.info('Applying time-discretization...')
 m.discretizer = pe.TransformationFactory('dae.finite_difference')
-m.discretizer.apply_to(m, nfe=100, wrt=m.fs.time, scheme="BACKWARD")
+m.discretizer.apply_to(m, nfe=300, wrt=m.fs.time, scheme="BACKWARD")
 
 shell_inlet_temperature = 288.15
 shell_flow = 44004.14222
@@ -137,7 +142,6 @@ fix_tube_inlet(tube_in_element)
 for e in shell_in_elements:
     fix_shell_inlet(e)
 
-
 logger.info('Adding Arcs for 2D flow network...')
 
 exec(arc_block)
@@ -145,13 +149,12 @@ exec(arc_block)
 # Apply Arc constraints
 pe.TransformationFactory("network.expand_arcs").apply_to(m.fs)
 
-
 solver = pe.SolverFactory('ipopt')
 solver.options = {
-            "tol": 1e-5,
-            "linear_solver": "ma27",
-            "max_iter": 500,
-        }
+    "tol": 1e-5,
+    "linear_solver": "ma27",
+    "max_iter": 500,
+}
 logger.info('Solving model with steady state conditions...')
 solver.solve(m, tee=True)
 
@@ -162,15 +165,14 @@ for e in shell_in_elements:
             e.shell_inlet.temperature[t].fix(288.15 - 10)
         elif t >= 600 and t < 900:
             e.shell_inlet.temperature[t].fix(288.15)
-        elif t >=900 and t < 1200:
+        elif t >= 900 and t < 1200:
             e.shell_inlet.temperature[t].fix(288.15 + 10)
         elif t >= 1200:
             e.shell_inlet.temperature[t].fix(288.15)
 
-
 logger.info('Solving model with temperature step change...')
 solver.solve(m, tee=True)
 
-
 logger.info('Writing results...')
-write_csv('./data/time_series_0D.csv', all_elements)
+write_csv(f'./data/time_series_p{n_passes}_e{n_elements_per_pass}.csv',
+          all_elements)
