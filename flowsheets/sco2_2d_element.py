@@ -12,7 +12,7 @@ from idaes.generic_models.unit_models.heat_exchanger import delta_temperature_lm
 from idaes.generic_models.properties import swco2
 from idaes.power_generation.properties import FlueGasParameterBlock
 import idaes.logger
-from util import print_results_0d
+from util import print_results_0d, write_csv
 from models import HeatExchangerElement
 from flowsheets.code_gen import code_gen
 
@@ -27,8 +27,8 @@ m.fs = FlowsheetBlock(default={"dynamic": True,
 m.fs.prop_sco2 = swco2.SWCO2ParameterBlock()
 m.fs.prop_fluegas = FlueGasParameterBlock()
 
-n_passes = 8
-n_elements_per_pass = 7
+n_passes = 1
+n_elements_per_pass = 1
 n_elements = n_passes * n_elements_per_pass
 m.fs.es = []
 
@@ -172,96 +172,5 @@ logger.info('Solving model with temperature step change...')
 solver.solve(m, tee=True)
 
 
-logger.info('Displaying results...')
-
-hd = 0
-for idx, e in enumerate(all_elements):
-    print(f'')
-    print(f'-------ELEMENT #{idx}-(t=0)------')
-    hd += print_results_0d(e, t=0)
-
-print('')
-print(f'Total heat duty (t=0): {hd}')
-
-hd = 0
-for idx, e in enumerate(all_elements):
-    print(f'')
-    print(f'-------ELEMENT #{idx}-(t=600)------')
-    hd += print_results_0d(e, t=600)
-
-print('')
-print(f'Total heat duty (t=600): {hd}')
-
-res = []
-for e in all_elements:
-    t_tube_in = pe.value(e.tube.properties_in[0].temperature)
-    t_tube_out = pe.value(e.tube.properties_out[0].temperature)
-    t_shell_in = pe.value(e.shell.properties_in[0].temperature)
-    t_shell_out = pe.value(e.shell.properties_out[0].temperature)
-    res.append([t_tube_in, t_tube_out, t_shell_in, t_shell_out])
-
-x = np.array(res)
-
-
-fig, ax = plt.subplots(1, figsize=(12, 6))
-
-for i in range(n_passes):
-    ax.axvline(i * n_elements_per_pass, linestyle='dashed', c='grey', linewidth=1)
-
-ax.plot(x.T[0], label='T tube in')
-ax.plot(x.T[1], label='T tube out')
-ax.plot(x.T[2], '.', label='T shell in')
-ax.plot(x.T[3], '.', label='T shell out')
-
-for i, t_in in enumerate(x.T[2]):
-    y = (t_in, x.T[3][i])
-    X = (i, i)
-    ax.plot(X, y, '--', c='k', linewidth=0.5)
-
-ax.legend()
-ax.set_xlabel('Finite Element #')
-ax.set_ylabel('Temperature (K)')
-ax.set_title('2D Model Temperature Profile (t=0)')
-
-
-res = []
-for e in all_elements:
-    t_tube_in = pe.value(e.tube.properties_in[600].temperature)
-    t_tube_out = pe.value(e.tube.properties_out[600].temperature)
-    t_shell_in = pe.value(e.shell.properties_in[600].temperature)
-    t_shell_out = pe.value(e.shell.properties_out[600].temperature)
-    res.append([t_tube_in, t_tube_out, t_shell_in, t_shell_out])
-
-x = np.array(res)
-
-
-fig, ax = plt.subplots(1, figsize=(12, 6))
-
-for i in range(n_passes):
-    ax.axvline(i * n_elements_per_pass, linestyle='dashed', c='grey', linewidth=1)
-
-ax.plot(x.T[0], label='T tube in')
-ax.plot(x.T[1], label='T tube out')
-ax.plot(x.T[2], '.', label='T shell in')
-ax.plot(x.T[3], '.', label='T shell out')
-
-for i, t_in in enumerate(x.T[2]):
-    y = (t_in, x.T[3][i])
-    X = (i, i)
-    ax.plot(X, y, '--', c='k', linewidth=0.5)
-
-ax.legend()
-ax.set_xlabel('Finite Element #')
-ax.set_ylabel('Temperature (K)')
-ax.set_title('2D Model Temperature Profile (t=600)')
-
-
-t_out = pe.value(tube_out_element.tube.properties_out[:].temperature)
-time = [t for t in m.fs.time]
-
-fig, ax = plt.subplots(1)
-ax.plot(time, t_out)
-ax.set_xlabel('Time (s)')
-ax.set_ylabel('CO2 Exit Temperature (K)')
-
-plt.show()
+logger.info('Writing results...')
+write_csv('./data/time_series_0D.csv', all_elements)
