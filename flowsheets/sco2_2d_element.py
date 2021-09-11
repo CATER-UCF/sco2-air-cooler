@@ -49,7 +49,7 @@ for _ in range(n_elements):
         "shell": {"property_package": m.fs.prop_fluegas,
                   "has_pressure_change": False},
         "tube": {"property_package": m.fs.prop_sco2,
-                 "has_pressure_change": False},
+                 "has_pressure_change": True},
         "flow_pattern": HeatExchangerFlowPattern.crossflow,
         "dynamic": False}))
 
@@ -66,7 +66,7 @@ for e in all_elements:
 
 logger.info('Applying time-discretization...')
 m.discretizer = pe.TransformationFactory('dae.finite_difference')
-m.discretizer.apply_to(m, nfe=300, wrt=m.fs.time, scheme="BACKWARD")
+m.discretizer.apply_to(m, nfe=200, wrt=m.fs.time, scheme="BACKWARD")
 
 shell_inlet_temperature = 288.15
 shell_flow = 44004.14222
