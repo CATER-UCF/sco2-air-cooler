@@ -59,18 +59,18 @@ class HeatExchangerElement(HeatExchangerLumpedCapacitance):
             self.flowsheet().config.time
         )
         def hconv_tube_surrogate_eq(b, t):
-            return b.hconv_tube[t] == -2.57411323e+03 + 1.45303372e+03 \
-                   * b.tube_cp_mol[t] ** 3.19268561e-01 + \
-                   -3.73594780e-02 * b.tube_cp_mol[t]
+            return b.hconv_tube[t] == -2.73154315e+03 + 1.23970466e+03 \
+                   * b.tube_cp_mol[t] ** 3.17715435e-01 + \
+                   -2.82026104e-02 * b.tube_cp_mol[t]
 
         @self.Constraint(
             self.flowsheet().config.time
         )
         def dP_tube_surrogate_eq(b, t):
-            return b.dP_over_l_tube[t] == 2.19442286e+01 - \
-                   2.68411214e+05 / b.tube_rho[t] + \
-                   -7.17992324e-02 * b.tube_rho[t] + \
-                   3.93218678e-05 * b.tube_rho[t] ** 2
+            return b.dP_over_l_tube[t] == 8.82481388e+01 - \
+                   1.81263728e+05 / b.tube_rho[t] + \
+                   -2.98465078e-01 * b.tube_rho[t] + \
+                   1.92815541e-04 * b.tube_rho[t] ** 2
 
         @self.Constraint(
             self.flowsheet().config.time

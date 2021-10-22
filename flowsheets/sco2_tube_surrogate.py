@@ -99,7 +99,6 @@ def run_doe(npr, nt, include_low_temperatures=False):
     """
     Now setup our DOE and make sure each T*, P pair is included. 
     """
-    #n_cheb1 = np.ceil(nt * (t_star.mean() - t_min) / (t_max - t_min))
 
     n_cheb1 = nt // 4
     cheb1 = np.polynomial.chebyshev.chebpts1(n_cheb1)

@@ -13,7 +13,7 @@ class TubeSurrogate(Feed):
         self.number_of_tubes = Param(initialize=1., mutable=True)
         self.tube_hydraulic_diameter = Param(initialize=1., mutable=True)
         self.tube_flow_area = Param(initialize=1., mutable=True)
-        self.pipe_roughness = Param(initialize=0.00002, mutable=True)
+        self.pipe_roughness = Param(initialize=0.000001, mutable=True)
 
     def add_common_eqs(self):
         self.v_tube = Var(

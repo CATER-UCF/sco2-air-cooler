@@ -1,8 +1,8 @@
 """
 Surrogate model of dP / l using density:
 
-dP / l =  2.19442286e+01 -2.68411214e+05 / rho +
-         -7.17992324e-02 * rho + 3.93218678e-05 * rho ** 2
+dP / l =  8.82481388e+01 -1.81263728e+05 / rho +
+         -2.98465078e-01 * rho + 1.92815541e-04 * rho ** 2
 
 This produces an excellent fit with error <= 0.15%.
 """

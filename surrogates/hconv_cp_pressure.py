@@ -1,8 +1,8 @@
 """
 Surrogate model of hconv using cP:
 
-hconv = -2.57411323e+03 + 1.45303372e+03 * cp_mol ** 3.19268561e-01 +
-        -3.73594780e-02 * cp_mol
+hconv = -2.73154315e+03 + 1.23970466e+03 * cp_mol ** 3.17715435e-01 +
+        -2.82026104e-02 * cp_mol
 
 This is the leading model candidate having error <= 2%. Using pressure as an
 additional predictor yields a slight improvement. But I don't think this is

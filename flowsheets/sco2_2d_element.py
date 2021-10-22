@@ -3,17 +3,6 @@ Runs the 2D simulation with an arbitrary number of passes and elements per
 pass. Writes results to .csv
 
 Work in progress...
-
-C:\Users\Rusty\AppData\Local\idaes\bin\ipopt.exe: malloc(19264) failure: ran out of memory.
-ERROR: Solver (ipopt) returned non-zero return code (1)
-ERROR: See the solver log above for diagnostic information.
-Traceback (most recent call last):
-  File "C:/sw/heat-exchanger-2d/flowsheets/sco2_2d_element.py", line 159, in <module>
-    solver.solve(m, tee=True)
-  File "C:\Users\Rusty\miniconda3\envs\idaes-1.10.0\lib\site-packages\pyomo\opt\base\solvers.py", line 595, in solve
-    raise ApplicationError(
-pyomo.common.errors.ApplicationError: Solver (ipopt) did not exit normally
-
 """
 
 import pyomo.environ as pe
@@ -79,13 +68,12 @@ for e in all_elements:
 
 logger.info('Applying time-discretization...')
 m.discretizer = pe.TransformationFactory('dae.finite_difference')
-m.discretizer.apply_to(m, nfe=200, wrt=m.fs.time, scheme="BACKWARD")
+m.discretizer.apply_to(m, nfe=10, wrt=m.fs.time, scheme="BACKWARD")
 
 shell_inlet_temperature = 288.15
 shell_flow = 44004.14222
 tube_inlet_temperature = 384.35
 tube_inlet_pressure = 7653000
-#tube_outlet_pressure = 7599375
 tube_flow = 13896.84163
 
 shell_area = 690073.9153
@@ -169,21 +157,6 @@ solver.options = {
     "max_iter": 500,
 }
 logger.info('Solving model with steady state conditions...')
-solver.solve(m, tee=True)
-
-# Adding temperature disturbances
-for e in shell_in_elements:
-    for t in m.fs.time:
-        if t >= 300 and t < 600:
-            e.shell_inlet.temperature[t].fix(288.15 - 10)
-        elif t >= 600 and t < 900:
-            e.shell_inlet.temperature[t].fix(288.15)
-        elif t >= 900 and t < 1200:
-            e.shell_inlet.temperature[t].fix(288.15 + 10)
-        elif t >= 1200:
-            e.shell_inlet.temperature[t].fix(288.15)
-
-logger.info('Solving model with temperature step change...')
 solver.solve(m, tee=True)
 
 logger.info('Writing results...')
