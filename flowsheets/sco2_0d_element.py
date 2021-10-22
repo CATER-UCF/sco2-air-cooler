@@ -6,7 +6,7 @@ from idaes.generic_models.unit_models import HeatExchanger, HeatExchangerFlowPat
 from idaes.generic_models.unit_models.heat_exchanger import delta_temperature_lmtd_callback
 from idaes.generic_models.properties import swco2
 from idaes.power_generation.properties import FlueGasParameterBlock
-from util import print_results_0d
+from util import print_results_0d, write_csv
 from models import HeatExchangerElement
 
 
@@ -68,14 +68,14 @@ def make_model():
         "shell": {"property_package": m.fs.prop_fluegas,
                   "has_pressure_change": False},
         "tube": {"property_package": m.fs.prop_sco2,
-                 "has_pressure_change": True},
+                 "has_pressure_change": False},
         "flow_pattern": HeatExchangerFlowPattern.crossflow,
         "dynamic": False})
 
     m.fs.HE.setup()
     m.fs.HE.activate_dynamic_heat_eq()
     m.discretizer = pe.TransformationFactory('dae.finite_difference')
-    m.discretizer.apply_to(m, nfe=100, wrt=m.fs.time, scheme="BACKWARD")
+    m.discretizer.apply_to(m, nfe=200, wrt=m.fs.time, scheme="BACKWARD")
 
     return set_boundary_conditions(m)
 
@@ -130,75 +130,4 @@ print('+++++++++++++++++++++++++++++++++++++++')
 print('')
 print_results_0d(m.fs.HE, t=600)
 
-t_tube_in = pe.value(m.fs.HE.tube.properties_in[:].temperature)
-t_tube_out = pe.value(m.fs.HE.tube.properties_out[:].temperature)
-t_shell_in = pe.value(m.fs.HE.shell.properties_in[:].temperature)
-t_shell_out = pe.value(m.fs.HE.shell.properties_out[:].temperature)
-t_wall = pe.value(m.fs.HE.wall_temperature[:])
-hd = np.array(pe.value(m.fs.HE.heat_duty[:])) * -1e-6
-
-time = [t for t in m.fs.time]
-plt.plot(time, t_tube_in, label='t tube in')
-plt.plot(time, t_tube_out, label='t tube out')
-plt.plot(time, t_shell_in, label='t shell in')
-plt.plot(time, t_shell_out, label='t shell out')
-plt.plot(time, t_wall, label='t wall')
-plt.xlabel('Time (s)')
-plt.ylabel('Temperature (K)')
-plt.title('Dynamic Model - Temperatures')
-plt.legend()
-plt.show()
-
-
-fig, ax = plt.subplots(2, 1)
-
-ax[0].plot(time, t_tube_out, c='b', label='CO2 Exit')
-ax[0].set_ylabel('Temperature (K)')
-ax[0].set_title('Transient Response')
-ax[0].legend()
-
-ax[1].plot(time, t_shell_in, c='r', label='Air Inlet')
-ax[1].set_xlabel('Time (s)')
-ax[1].set_ylabel('Temperature (K)')
-ax[1].legend()
-
-plt.show()
-
-
-rho_tube_out = pe.value(m.fs.HE.tube.properties_out[:].dens_mass)
-plt.plot(time, rho_tube_out, label='Rho tube out')
-plt.xlabel('Time (s)')
-plt.ylabel('Density (kg/m3)')
-plt.title('Dynamic Model - Density')
-plt.legend()
-
-
-fig, ax = plt.subplots(3, 1)
-
-m_tube_in = pe.value(m.fs.HE.tube.properties_in[:].flow_mass)
-m_tube_out = pe.value(m.fs.HE.tube.properties_out[:].flow_mass)
-m_shell_in = pe.value(m.fs.HE.shell.properties_in[:].flow_mass)
-m_shell_out = pe.value(m.fs.HE.shell.properties_out[:].flow_mass)
-
-flow_c_hot = pe.value(m.fs.HE.flow_coefficient_hot_side[:])
-flow_c_cold = pe.value(m.fs.HE.flow_coefficient_cold_side[:])
-
-print(f'Flow coefficient hot: {flow_c_hot[0]}')
-print(f'Flow coefficient cold: {flow_c_cold[0]}')
-
-ax[0].plot(time, m_tube_in, label='SCO2 in')
-ax[0].plot(time, m_tube_out, label='SCO2 out')
-ax[0].set_title('Mass flow')
-ax[0].legend()
-
-ax[1].plot(time, m_tube_in, label='SCO2 in')
-ax[1].plot(time, m_tube_out, label='SCO2 out')
-ax[1].set_xlabel('Time (s)')
-ax[1].legend()
-
-ax[2].plot(time, flow_c_hot, label='Flow C Hot')
-ax[2].plot(time, flow_c_cold, label='Flow C Cold')
-ax[2].set_xlabel('Time (s)')
-ax[2].legend()
-
-plt.show()
+write_csv(f'./data/time_series_0d.csv', [m.fs.HE])

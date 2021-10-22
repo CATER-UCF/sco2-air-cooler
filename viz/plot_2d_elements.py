@@ -54,7 +54,7 @@ def plot_2d_steady_state(data_file, n_passes=8, n_elements=7, show=False, image_
     # sCO2 arrow out...
     if n_passes % 2:
         arrow_x = wd - edge_pad
-        arrox_dx = edge_pad
+        arrow_dx = edge_pad
     else:
         arrow_x = edge_pad
         arrow_dx = -edge_pad
