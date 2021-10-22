@@ -13,19 +13,19 @@ from models import HeatExchangerLumpedCapacitance
 def set_boundary_conditions(m):
 
     shell_inlet_temperature = 288.15
-    shell_flow = 44004.14222 / 56
+    shell_flow = 44004.14222
     tube_inlet_temperature = 384.35
-    tube_inlet_pressure = 7751362.5
-    tube_outlet_pressure = 7599375
-    tube_flow = 13896.84163 / 56
+    tube_inlet_pressure = 7653000
+    tube_outlet_pressure = 7500000
+    tube_flow = 13896.84163
 
-    shell_area = 690073.9153 / 56
+    shell_area = 690073.9153
     shell_HTC = 22
 
-    tube_area = 19542.2771 / 56
+    tube_area = 19542.2771
     tube_HTC = 1000
 
-    tube_mass = 1160 * 322 / 56
+    tube_mass = 1160 * 322
 
     m.fs.HE.crossflow_factor.fix(0.8)
     m.fs.HE.area.fix(1)
@@ -48,7 +48,6 @@ def set_boundary_conditions(m):
     m.fs.HE.shell_inlet.flow_mol_comp[:, "SO2"].fix(0)
     m.fs.HE.shell_inlet.temperature[:].fix(shell_inlet_temperature)
     m.fs.HE.shell_inlet.pressure[:].fix(101325)
-    m.fs.HE.shell_outlet.pressure[:].fix(101325 * 0.95)
 
     m.fs.HE.tube_outlet[:].enth_mol.setub(tube_inlet_enthalpy)
     m.fs.HE.shell_outlet.temperature[:].setlb(shell_inlet_temperature)
@@ -71,7 +70,7 @@ def make_model():
         "cold_side_name": "shell",
         "hot_side_name": "tube",
         "shell": {"property_package": m.fs.prop_fluegas,
-                  "has_pressure_change": True},
+                  "has_pressure_change": False},
         "tube": {"property_package": m.fs.prop_sco2,
                  "has_pressure_change": True},
         "flow_pattern": HeatExchangerFlowPattern.crossflow,

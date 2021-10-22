@@ -25,7 +25,7 @@ def set_boundary_conditions(m):
     shell_inlet_temperature = 288.15
     shell_flow = 44004.14222
     tube_inlet_temperature = 384.35
-    tube_inlet_pressure = 7751362.5
+    tube_inlet_pressure = 7653000
     #tube_outlet_pressure = 7599375
     tube_flow = 13896.84163
 
@@ -60,8 +60,8 @@ def set_boundary_conditions(m):
 
     # Instead of fixing exit pressures, we can take these values from
     # running `sco2_0d_lumped_capacitance.py`:
-    m.fs.HE.flow_coefficient_cold_side[:].fix(4.004)
-    m.fs.HE.flow_coefficient_hot_side[:].fix(248.509)
+    m.fs.HE.flow_coefficient_cold_side[:].fix(0)
+    m.fs.HE.flow_coefficient_hot_side[:].fix(250.16)
 
     m.fs.HE.shell.material_accumulation[0, :, :].fix(0)
     m.fs.HE.shell.energy_accumulation[0, :].fix(0)

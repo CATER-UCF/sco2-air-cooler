@@ -130,15 +130,15 @@ m.discretizer.apply_to(m, nfe=100, wrt=m.fs.time, scheme="BACKWARD")
 shell_inlet_temperature = 288.15
 shell_flow = 44004.14222
 tube_inlet_temperature = 384.35
-tube_inlet_pressure = 7751362.5
-tube_outlet_pressure = 7599375
+tube_inlet_pressure = 7653000
+tube_outlet_pressure = 7500000
 tube_flow = 13896.84163
 
 shell_area = 690073.9153
 shell_HTC = 30
 
 tube_area = 19542.2771
-tube_HTC = 4000
+tube_HTC = 2000
 
 tube_mass = 1160 * 322
 

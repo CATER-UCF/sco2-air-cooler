@@ -1,5 +1,5 @@
 """
-Steady-state simulation of a 2D countercurrent crossflow heat exchanger.
+Steady-state simulations. Assuming constant HTC and linear pressure drop along the length of tubes.
 """
 
 import numpy as np
@@ -111,8 +111,8 @@ tube_out_element = m.fs.e55
 shell_inlet_temperature = 288.15
 shell_flow = 44004.14222
 tube_inlet_temperature = 384.35
-tube_inlet_pressure = 7751362.5
-tube_outlet_pressure = 7599375
+tube_inlet_pressure = 7653000
+tube_outlet_pressure = 7500000
 tube_flow = 13896.84163
 
 shell_area = 690073.9153
