@@ -1,4 +1,5 @@
 import pyomo.environ as pe
+import pandas as pd
 
 
 def print_results_0d(e, t=0):
@@ -49,3 +50,34 @@ def print_results_0d(e, t=0):
     print(f'Crossflow P: {crossflow_P}')
 
     return heat_duty * 1e-6
+
+
+def print_steady_state_results(file_name, passes=8, elements=7, t=0):
+    df = pd.read_csv(file_name)
+
+    last_element = passes * elements - 1
+
+    temp_shell_out_cols = [f'temperature_shell_out_{i}' for i in range(elements)]
+    heat_duty_cols = [f'heat_duty_{i+1}' for i in range(elements * passes)]
+
+    temp_tube_in = df['temperature_tube_in_0'][t] - 273.15
+    press_tube_in = df['pressure_tube_in_0'][t] * 1e-5
+    temp_shell_in = df[f'temperature_shell_in_{last_element}'][t] - 273.15
+
+    temp_tube_out = df[f'temperature_tube_out_{last_element}'][t] - 273.15
+    press_tube_out = df[f'pressure_tube_out_{last_element}'][t] * 1e-5
+    temp_shell_out = df[temp_shell_out_cols].mean(axis=1)[t] - 273.15
+    heat_duty = df[heat_duty_cols].sum(axis=1)[t]
+
+    print(f'CO2 Temperature In (C):    {temp_tube_in}')
+    print(f'CO2 Pressure In (bar):     {press_tube_in}')
+    print(f'Air Temperature In (C):    {temp_shell_in}')
+
+    print(f'CO2 Temperature Out (C):   {temp_tube_out}')
+    print(f'CO2 Pressure Out (bar):    {press_tube_out}')
+    print(f'Air Temperature Out (C):   {temp_shell_out}')
+    print(f'Heat Duty (MW):            {heat_duty}')
+
+
+if __name__ == '__main__':
+    print_steady_state_results('./data/time_series_ramp_down_p8_e7.csv', t=0)

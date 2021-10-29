@@ -8,6 +8,7 @@ class HeatExchangerElement(HeatExchangerLumpedCapacitance):
         self.tube_length = Param(initialize=1, mutable=True)
         self.internal_surface_area = Param(initialize=1, mutable=True)
         self.external_surface_area = Param(initialize=1, mutable=True)
+        self.critical_temp_margin = Param(initialize=-999., mutable=True)
         self.add_dynamic_variables()
         self.add_dynamic_variable_constraints()
         self.add_pressure_flow_constraints()
@@ -78,6 +79,40 @@ class HeatExchangerElement(HeatExchangerLumpedCapacitance):
         def hconv_shell_surrogate_eq(b, t):
             return b.hconv_shell[t] == 5.00519828 + 0.04982918 * \
                    b.shell_temp[t]
+
+        @self.Expression(
+            self.flowsheet().config.time
+        )
+        def critical_temp_in(b, t):
+            return 2.55996364e+02 + \
+                   7.15290022e-06 * b.tube.properties_in[t].pressure \
+                   - 8.52339353e-14 * b.tube.properties_in[t].pressure ** 2
+
+        @self.Expression(
+            self.flowsheet().config.time
+        )
+        def critical_temp_out(b, t):
+            return 2.55996364e+02 + \
+                   7.15290022e-06 * b.tube.properties_out[t].pressure \
+                   - 8.52339353e-14 * b.tube.properties_out[t].pressure ** 2
+
+        # Using these constraints eliminates the AMPL evaluation errors from
+        # ipopt. However, the model takes much longer to solve this way. So
+        # I'm leaving this in as an option in case it's useful later. But it's
+        # disabled by setting critical_temp_margin=-999.
+        @self.Constraint(
+            self.flowsheet().config.time,
+        )
+        def temp_in_above_critical(b, t):
+            return b.tube.properties_in[t].temperature >= \
+                   b.critical_temp_in[t] + b.critical_temp_margin
+
+        @self.Constraint(
+            self.flowsheet().config.time
+        )
+        def temp_out_above_critical(b, t):
+            return b.tube.properties_out[t].temperature >= \
+                   b.critical_temp_out[t] + b.critical_temp_margin
 
     def add_UA_and_flow_coefficient_constraints(self):
 

@@ -16,8 +16,8 @@ def plot_2d_steady_state(data_file, n_passes=8, n_elements=7, show=False, image_
     n_eles = n_passes * n_elements
     tube_temps, shell_temps = np.empty(n_eles), np.empty(n_eles)
     for i in range(n_eles):
-        tube_series = df[f'temperature_tube_{i}']
-        shell_series = df[f'temperature_shell_{i}']
+        tube_series = df[f'temperature_tube_in_{i}']
+        shell_series = df[f'temperature_shell_in_{i}']
         tube_temps[i] = tube_series[0]
         shell_temps[i] = shell_series[0]
 
@@ -27,7 +27,7 @@ def plot_2d_steady_state(data_file, n_passes=8, n_elements=7, show=False, image_
     color_res = 1000
     cmap = cm.get_cmap('turbo', color_res)
 
-    fig, ax = plt.subplots(1, 2, figsize=(18, 7))
+    fig, ax = plt.subplots(1, 2, figsize=(10, 4))
 
     wd = 1000
     ht = 1000
@@ -133,15 +133,13 @@ def plot_2d_steady_state(data_file, n_passes=8, n_elements=7, show=False, image_
 
     anorm = Normalize(vmin=min_temp-273.15, vmax=max_temp-273.15)
     cb = fig.colorbar(cm.ScalarMappable(norm=anorm, cmap=cmap), ax=ax, shrink=0.8)
-    cb.set_label('Temperature (C)', rotation=270)
+    cb.set_label('Temperature (C)', rotation=270, labelpad=20)
 
     if image_file is not None:
-        fig.savefig(image_file)
+        fig.savefig(image_file, dpi=500)
     if show:
         plt.show()
 
 
-for i in range(7):
-    data_name = f'./data/time_series_p8_e{i+1}.csv'
-    img_name = f'./images/steady_state_p8_e{i+1}.png'
-    plot_2d_steady_state(data_name, n_elements=i+1, n_passes=8, image_file=img_name)
+plot_2d_steady_state('./data/time_series_step_changes_p8_e7.csv',
+                     image_file='./images/steady_state_p8_e7.png')

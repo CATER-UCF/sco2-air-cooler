@@ -2,29 +2,43 @@ import matplotlib.pyplot as plt
 import matplotlib
 import pandas as pd
 
-matplotlib.rcParams.update({'font.size': 14})
+matplotlib.rcParams.update({'font.size': 12})
 
 
-def plot_2d_steady_state(data_file, n_passes=8, n_elements=7,
-                         show=False, image_file=None):
+def plot_response(data_file, n_passes=8, n_elements=7,
+                  show=False, image_file=None,
+                  loc0='upper left', loc1='upper left',
+                  response_var='temperature_tube_out', response_label='CO2 Out',
+                  response_axis_label='Temperature (C)', response_color='r'):
 
     # Read in the results data
     df = pd.read_csv(data_file)
     n_eles = n_passes * n_elements
 
     time = df['time']
-    air_temp = df[f'temperature_shell_{n_eles - 1}']
-    sco2_temp = df[f'temperature_tube_{n_eles}']
+    air_temp = df[f'temperature_shell_in_{n_eles - 1}']
+    response = df[f'{response_var}_{n_eles - 1}']
+    if 'temperature' in response_var:
+        response -= 273.15
 
-    fig, ax = plt.subplots(2, 1)
-    ax[0].plot(time, sco2_temp - 273.15, 'b', label='CO2 Out')
-    ax[1].plot(time, air_temp - 273.15, 'r', label='Air In')
+    fig = plt.figure(constrained_layout=True, figsize=(6, 5))
+    gs = fig.add_gridspec(2, 1)
+    ax0 = fig.add_subplot(gs[0, 0])
+    ax1 = fig.add_subplot(gs[1, 0])
 
-    [axs.legend(loc='upper left') for axs in ax]
-    ax[1].set_xlabel('time (s)')
-    ax[0].get_xaxis().set_visible(False)
+    ax0.plot(time, response, response_color, label=response_label)
+    ax1.plot(time, air_temp - 273.15, 'b', label='Air In')
 
-    fig.suptitle('Temperature Response (C)')
+    ax0.get_xaxis().set_visible(False)
+    ax0.set_ylabel(response_axis_label)
+
+    ax1.set_xlabel('time (s)')
+    ax1.set_ylabel('Temperature (C)')
+
+    ax0.legend(loc=loc0)
+    ax1.legend(loc=loc1)
+
+    fig.suptitle('Transient Response')
 
     if show:
         plt.show()
@@ -33,6 +47,34 @@ def plot_2d_steady_state(data_file, n_passes=8, n_elements=7,
         fig.savefig(image_file)
 
 
-plot_2d_steady_state('./data/time_series_p8_e7.csv',
-                     n_passes=7, n_elements=8, show=False,
-                     image_file='./images/temp_response_p8_e7.png')
+plot_response('./data/time_series_step_changes_p8_e7.csv',
+              image_file='./images/temperature_response_step_changes_p8_e7.png')
+
+plot_response('./data/time_series_ramp_down_p8_e7.csv',
+              loc0='upper right', loc1='upper right',
+              image_file='./images/temperature_response_ramp_down_p8_e7.png')
+
+plot_response('./data/time_series_ramp_up_p8_e7.csv',
+              loc0='upper right', loc1='upper right',
+              image_file='./images/temperature_response_ramp_up_p8_e7.png')
+
+plot_response('./data/time_series_step_changes_p8_e7.csv',
+              loc0='upper right',
+              response_var='density_tube_out',
+              response_axis_label='Density (kg/m^3)',
+              response_color='g',
+              image_file='./images/density_response_step_changes_p8_e7.png')
+
+plot_response('./data/time_series_ramp_down_p8_e7.csv',
+              loc0='upper left', loc1='upper right',
+              response_var='density_tube_out',
+              response_axis_label='Density (kg/m^3)',
+              response_color='g',
+              image_file='./images/density_response_ramp_down_p8_e7.png')
+
+plot_response('./data/time_series_ramp_up_p8_e7.csv',
+              loc0='upper left', loc1='upper right',
+              response_var='density_tube_out',
+              response_axis_label='Density (kg/m^3)',
+              response_color='g',
+              image_file='./images/density_response_ramp_up_p8_e7.png')

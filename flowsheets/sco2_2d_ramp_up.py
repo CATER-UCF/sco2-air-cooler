@@ -1,8 +1,5 @@
 """
-Runs the 2D simulation with an arbitrary number of passes and elements per
-pass. Writes results to .csv
-
-Work in progress...
+Transient simulation with air temperature ramping up.
 """
 
 import pyomo.environ as pe
@@ -16,24 +13,29 @@ import idaes.logger
 from util import write_csv
 from models import HeatExchangerElement
 from flowsheets.code_gen import code_gen
-import argparse
+import numpy as np
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument('-p', '--passes', type=int, help='Number of passes')
-parser.add_argument('-e', '--elements', type=int, help='Number of heat exchanger elements per pass')
+n_passes = 8
+n_elements_per_pass = 7
 
-args = parser.parse_args()
-n_passes = args.passes
-n_elements_per_pass = args.elements
+# Calculate temperature ramps
+n_time_steps = 200
+start_time = 1000
+end_time = 3000
+start_temp = 288.15
+end_temp = 313.15
+
+time_set = [0] + list(np.linspace(start_time, end_time, n_time_steps))
+temp_set = [start_temp] + list(np.linspace(start_temp, end_temp, n_time_steps // 2)) \
+           + [end_temp] * (n_time_steps // 2)
 
 
 logger = idaes.logger.getLogger('idaes')
-
 logger.info('Creating model...')
 m = pe.ConcreteModel()
 m.fs = FlowsheetBlock(default={"dynamic": True,
-                               "time_set": [0, 300, 600, 900, 1200, 1500],
+                               "time_set": time_set,
                                "time_units": pe.units.s})
 
 m.fs.prop_sco2 = swco2.SWCO2ParameterBlock()
@@ -68,7 +70,7 @@ for e in all_elements:
 
 logger.info('Applying time-discretization...')
 m.discretizer = pe.TransformationFactory('dae.finite_difference')
-m.discretizer.apply_to(m, nfe=10, wrt=m.fs.time, scheme="BACKWARD")
+m.discretizer.apply_to(m, nfe=n_time_steps, wrt=m.fs.time, scheme="BACKWARD")
 
 shell_inlet_temperature = 288.15
 shell_flow = 44004.14222
@@ -159,6 +161,17 @@ solver.options = {
 logger.info('Solving model with steady state conditions...')
 solver.solve(m, tee=True)
 
+for e in all_elements:
+    e.activate_dynamic_heat_eq()
+
+# Adding temperature disturbances
+for e in shell_in_elements:
+    for idx, t in enumerate(m.fs.time):
+        e.shell_inlet.temperature[t].fix(temp_set[idx])
+
+logger.info('Solving model with temperature ramp...')
+solver.solve(m, tee=True)
+
 logger.info('Writing results...')
-write_csv(f'./data/time_series_p{n_passes}_e{n_elements_per_pass}.csv',
+write_csv(f'./data/time_series_ramp_up_p{n_passes}_e{n_elements_per_pass}.csv',
           all_elements)
