@@ -142,4 +142,4 @@ def plot_2d_steady_state(data_file, n_passes=8, n_elements=7, show=False, image_
 
 
 plot_2d_steady_state('./data/time_series_step_changes_p8_e7.csv',
-                     image_file='./images/steady_state_p8_e7.png')
+                     image_file='./images/temperature_profile_2d.png')

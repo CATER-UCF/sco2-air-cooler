@@ -12,14 +12,21 @@ re = T(:, 7);
 f = T(:, 8);
 
 
-figure();
+fig = figure();
 plot3(t, 1e-6 * p, h, '.');
 xlabel('Temperature (K)');
 ylabel('Pressure (MPa)');
-zlabel('H (w/m**2 K)');
+zlabel('H (w/m^2 K)');
+view(40, 40);
+saveas(fig, '../images/hconv_vs_temp_press.png');
 
-figure();
+
+fig = figure();
 plot3(cp, 1e-6 * p, h, '.');
 xlabel('Cp (J / mol * K)');
 ylabel('Pressure (MPa)');
-zlabel('H (w/m**2 K)');
+zlabel('H (w/m^2 K)');
+view(-40, 40);
+saveas(fig, '../images/hconv_vs_Cp_press.png');
+
+close all;
