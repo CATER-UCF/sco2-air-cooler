@@ -55,7 +55,7 @@ plot_response('./data/time_series_ramp_down_p8_e7.csv',
               image_file='./images/temperature_response_ramp_down_p8_e7.png')
 
 plot_response('./data/time_series_ramp_up_p8_e7.csv',
-              loc0='upper right', loc1='upper right',
+              loc0='upper left', loc1='upper left',
               image_file='./images/temperature_response_ramp_up_p8_e7.png')
 
 plot_response('./data/time_series_step_changes_p8_e7.csv',
@@ -73,7 +73,7 @@ plot_response('./data/time_series_ramp_down_p8_e7.csv',
               image_file='./images/density_response_ramp_down_p8_e7.png')
 
 plot_response('./data/time_series_ramp_up_p8_e7.csv',
-              loc0='upper left', loc1='upper right',
+              loc0='upper right', loc1='upper left',
               response_var='density_tube_out',
               response_axis_label='Density (kg/m^3)',
               response_color='g',
