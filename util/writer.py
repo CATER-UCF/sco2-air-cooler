@@ -20,6 +20,8 @@ def write_csv(file_name, elements):
         rho_tube_out = get_arr(e.tube.properties_out[:].dens_mass)
         t_shell_in = get_arr(e.shell.properties_in[:].temperature)
         t_shell_out = get_arr(e.shell.properties_out[:].temperature)
+        hconv_shell = get_arr(e.hconv_shell[:])
+        hconv_tube = get_arr(e.hconv_tube[:])
         heat_duty = get_arr(e.heat_duty[:]) * 1e-6
 
         data[f'temperature_tube_in_{idx}'] = t_tube_in
@@ -30,6 +32,8 @@ def write_csv(file_name, elements):
         data[f'density_tube_out_{idx}'] = rho_tube_out
         data[f'temperature_shell_in_{idx}'] = t_shell_in
         data[f'temperature_shell_out_{idx}'] = t_shell_out
+        data[f'hconv_shell_{idx}'] = hconv_shell
+        data[f'hconv_tube_{idx}'] = hconv_tube
         data[f'heat_duty_{idx}'] = heat_duty
 
     df = pd.DataFrame(data=data)

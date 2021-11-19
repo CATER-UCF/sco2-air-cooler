@@ -1,12 +1,12 @@
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle, Arc
-from matplotlib import cm
+from matplotlib import cm, rc
 from matplotlib.colors import rgb2hex, Normalize
-import matplotlib
 import pandas as pd
 import numpy as np
 
-matplotlib.rcParams.update({'font.size': 14})
+rc('font', **{'family': 'sans-serif', 'sans-serif': ['DejaVu Sans'], 'size': 10})
+rc('mathtext', **{'default': 'regular'})
 
 
 def plot_2d_steady_state(data_file, n_passes=8, n_elements=7, show=False, image_file=None):
@@ -135,6 +135,8 @@ def plot_2d_steady_state(data_file, n_passes=8, n_elements=7, show=False, image_
     cb = fig.colorbar(cm.ScalarMappable(norm=anorm, cmap=cmap), ax=ax, shrink=0.8)
     cb.set_label('Temperature (C)', rotation=270, labelpad=20)
 
+    #plt.subplots_adjust(top=0.95, right=0.95, left=0.12, bottom=0.05)
+    #fig.set_size_inches(8, 6)
     if image_file is not None:
         fig.savefig(image_file, dpi=500)
     if show:
@@ -142,4 +144,4 @@ def plot_2d_steady_state(data_file, n_passes=8, n_elements=7, show=False, image_
 
 
 plot_2d_steady_state('./data/time_series_step_changes_p8_e7.csv',
-                     image_file='./images/temperature_profile_2d.png')
+                     image_file='./images/temperature_profile_2d.png', show=True)
