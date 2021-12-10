@@ -3,6 +3,18 @@ import pandas as pd
 
 
 def print_results_0d(e, t=0):
+    """
+    Prints out the results from a 0D heat exchanger element.
+
+    Parameters:
+    -----------
+        e : Heat exchanger unit model element
+        t : time
+
+    Returns:
+    --------
+        heat_duty : Heat transferred (MW)
+    """
     t_tube_in = pe.value(e.tube.properties_in[t].temperature)
     p_tube_in = pe.value(e.tube.properties_in[t].pressure)
     h_tube_in = pe.value(e.tube.properties_in[t].enth_mol) / 18.01528
@@ -52,7 +64,18 @@ def print_results_0d(e, t=0):
     return heat_duty * 1e-6
 
 
-def print_steady_state_results(file_name, passes=8, elements=7, t=0):
+def print_results_row(file_name, passes=8, elements=7, t=0):
+    """
+    Use for inspecting results from a transient simulation at one particular
+    time point.
+
+    Parameters:
+    -----------
+        file_name : .csv file name
+        passes : number of tube passes
+        elements : number of elements per pass
+        t : time (row index)
+    """
     df = pd.read_csv(file_name)
 
     last_element = passes * elements - 1
@@ -80,4 +103,4 @@ def print_steady_state_results(file_name, passes=8, elements=7, t=0):
 
 
 if __name__ == '__main__':
-    print_steady_state_results('./data/time_series_ramp_down_p8_e7.csv', t=0)
+    print_results_row('./data/time_series_ramp_down_p8_e7.csv', t=0)

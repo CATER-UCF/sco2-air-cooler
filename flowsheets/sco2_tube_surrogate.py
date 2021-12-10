@@ -1,8 +1,6 @@
 """
 Flowsheet for generating a surrogate model of hconv and dP as functions of
 fluid state.
-
-Work in progress...
 """
 import numpy as np
 import matplotlib.pyplot as plt
@@ -14,7 +12,19 @@ import pandas as pd
 
 
 def make_model(sco2_t, sco2_p, sco2_mol_flow, dyn=True, n_pts=10):
+    """
+    Parameters:
+    -----------
+        sco2_t : sCO2 temperature (K)
+        sco2_p : sCO2 pressure (Pa)
+        sco2_mol_flow : sCO2 flow rate (mol/s)
+        dyn : Dynamic flag
+        n_pts : number of temperature / pressure pairs to simulate
 
+    Returns:
+    --------
+        model : Unit model on a newly generated flowsheet.
+    """
     m = pe.ConcreteModel()
     if dyn:
         m.fs = FlowsheetBlock(default={"dynamic": True,
@@ -49,7 +59,17 @@ def make_model(sco2_t, sco2_p, sco2_mol_flow, dyn=True, n_pts=10):
     return m
 
 
-def run_doe(npr, nt, include_low_temperatures=False):
+def run_doe(npr, nt):
+    """
+    Parameters:
+    ----------
+        npr : Number of pressures in the DOE
+        nt : Number of temperatures in the DOE
+
+    Returns:
+    --------
+        None - writes results to .csv files in ./data
+    """
 
     # Full-factorial DOE over a range of temperatures and pressures
     t_min = 300
@@ -97,7 +117,8 @@ def run_doe(npr, nt, include_low_temperatures=False):
         print(f'Solution found... P={p}, T*={t_star[i]}')
 
     """
-    Now setup our DOE and make sure each T*, P pair is included. 
+    Now setup our DOE and make sure each T*, P pair is included, surrounding T*
+    with Chebyshev points. 
     """
 
     n_cheb1 = nt // 4

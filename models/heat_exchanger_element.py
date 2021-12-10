@@ -3,7 +3,29 @@ from models import HeatExchangerLumpedCapacitance
 
 
 class HeatExchangerElement(HeatExchangerLumpedCapacitance):
+    """
+    Heat exchanger finite element for use in the two-dimensional flow network.
 
+    Usage:
+    ------
+    The general procedure for this model is as follows:
+
+        1. Add model(s) and Arcs to flowsheet
+        2. Call setup()
+        3. Set boundary conditions for steady-state
+        4. Initialize and solve the model
+        5. Add temperature disturbances and call activate_dynamic_heat_eq()
+        6. Solve the model with transient conditions
+
+    Correlations from ./surrogates are implemented with the following methods:
+
+        hconv_tube_surrogate_eq()
+        dP_tube_surrogate_eq()
+        hconv_shell_surrogate_eq()
+        critical_temp_in()
+        critical_temp_out()
+
+    """
     def setup(self):
         self.tube_length = Param(initialize=1, mutable=True)
         self.internal_surface_area = Param(initialize=1, mutable=True)

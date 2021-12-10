@@ -1,8 +1,5 @@
 """
-Runs the 2D simulation with an arbitrary number of passes and elements per
-pass. Writes results to .csv
-
-Work in progress...
+Transient simulation with two air temperature step changes.
 """
 
 import pyomo.environ as pe

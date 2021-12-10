@@ -4,11 +4,23 @@ import numpy as np
 
 
 def get_arr(expr):
+    """
+    Returns a numpy array from a pyomo expression
+    """
     return np.array(pe.value(expr))
 
 
 def write_csv(file_name, elements):
+    """
+    Parameters:
+    -----------
+        file_name : csv file name to write to
+        elements : list of heat exchanger unit model elements
 
+    Returns:
+    --------
+        None - writes results to .csv
+    """
     data = {'time': np.array([t for t in elements[0].flowsheet().time])}
     for idx, e in enumerate(elements):
 

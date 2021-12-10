@@ -1,3 +1,6 @@
+"""
+Computes rise and fall times from step-change simulation results.
+"""
 import pandas as pd
 
 file_name = './data/time_series_step_changes_p8_e7.csv'
@@ -5,6 +8,18 @@ df = pd.read_csv(file_name)
 
 
 def calculate_times(var_name, rise_pct, step_down_start, step_up_start):
+    """
+    Arguments:
+    ----------
+        var_name : Variable name, i.e. temperature or density with an index
+        rise_pct : Rise / fall %, typically 90 or 95
+        step_down_start : Simulation time for the first step (s)
+        step_up_start : Simulation time for the second step (s)
+
+    Returns:
+    --------
+        rise_time, fall_time
+    """
 
     var = df[var_name]
     time = df['time']

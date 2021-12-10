@@ -46,7 +46,7 @@ python viz/plot_heatmap.py
 
 To ease computational burden, the simulations make use of surrogate models. These are hard-coded correlations in the [unit model](./models/heat_exchanger_element.py) source file. We have four such surrogates:
 
-1. hconv (tube) as a function of sCO2 specificy heat capacity
+1. hconv (tube) as a function of sCO2 specific heat capacity
 2. dP (tube) as a function of sCO2 density
 3. hconv (shell) as a function of air temperature
 4. sCO2 critical temperature as a function of pressure

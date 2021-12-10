@@ -11,6 +11,19 @@ import pandas as pd
 
 
 def make_model(temp, press, flow_mol, dyn=True, n_pts=10):
+    """
+    Parameters:
+    -----------
+        temp : air temperature (K)
+        temp : air pressure (Pa)
+        flow_mol : air flow rate (mol/s)
+        dyn : Dynamic flag
+        n_pts : number of temperature / pressure pairs to simulate
+
+    Returns:
+    --------
+        model : Unit model on a newly generated flowsheet.
+    """
 
     m = pe.ConcreteModel()
     if dyn:
@@ -55,7 +68,16 @@ def make_model(temp, press, flow_mol, dyn=True, n_pts=10):
 
 
 def run_doe(npr, nt):
+    """
+    Parameters:
+    ----------
+        npr : Number of pressures in the DOE
+        nt : Number of temperatures in the DOE
 
+    Returns:
+    --------
+        None - writes results to .csv files in ./data
+    """
     # Full-factorial DOE over a range of temperatures and pressures
     t_min = 273.15
     t_max = 390
