@@ -27,7 +27,7 @@ def draw_model(n_passes=8, n_elements=7, show=False, image_file=None):
     ele_ht = (ht - edge_pad * 2 - mid_pad * (n_passes - 1)) / n_passes
 
     # sCO2 arrow in...
-    ax.arrow(0, edge_pad + ele_ht / 2, dx=edge_pad, dy=0,
+    ax.arrow(0, ht - (edge_pad + ele_ht / 2), dx=edge_pad, dy=0,
                 length_includes_head=True,
                 width=lw,
                 head_width=lw*10,
@@ -41,7 +41,7 @@ def draw_model(n_passes=8, n_elements=7, show=False, image_file=None):
         arrow_x = edge_pad
         arrow_dx = -edge_pad
 
-    ax.arrow(arrow_x, ht - (edge_pad + ele_ht / 2), dx=arrow_dx, dy=0,
+    ax.arrow(arrow_x, edge_pad + ele_ht / 2, dx=arrow_dx, dy=0,
              length_includes_head=True,
              width=lw,
              head_width=lw*10,
@@ -50,12 +50,12 @@ def draw_model(n_passes=8, n_elements=7, show=False, image_file=None):
     # Air side arrows...
     arrow_x = edge_pad + ele_wd / 2
     for i in range(n_elements):
-        ax.arrow(arrow_x, ht-edge_pad/2, dx=0, dy=-edge_pad/2,
+        ax.arrow(arrow_x, ht-edge_pad, dx=0, dy=edge_pad/2,
                  length_includes_head=True,
                  width=lw,
                  head_width=lw * 10,
                  color='k')
-        ax.arrow(arrow_x, edge_pad, dx=0, dy=-edge_pad/2,
+        ax.arrow(arrow_x, edge_pad/2, dx=0, dy=edge_pad/2,
                  length_includes_head=True,
                  width=lw,
                  head_width=lw * 10,

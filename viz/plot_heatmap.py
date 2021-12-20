@@ -1,3 +1,7 @@
+"""
+Plots the two-dimensional temperature heatmap used in the paper. Note: the image
+should be manually cropped to remove some extra whitespace.
+"""
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle, Arc
 from matplotlib import cm, rc
@@ -20,6 +24,10 @@ def plot_2d_steady_state(data_file, n_passes=8, n_elements=7, show=False, image_
         shell_series = df[f'temperature_shell_in_{i}']
         tube_temps[i] = tube_series[0]
         shell_temps[i] = shell_series[0]
+
+    # Since CO2 flows from top to bottom and air vice versa...
+    tube_temps = np.flip(tube_temps)
+    shell_temps = np.flip(shell_temps)
 
     min_temp = min(np.min(shell_temps), min(tube_temps))
     max_temp = max(np.max(shell_temps), max(tube_temps))
@@ -45,7 +53,7 @@ def plot_2d_steady_state(data_file, n_passes=8, n_elements=7, show=False, image_
     ele_ht = (ht - edge_pad * 2 - mid_pad * (n_passes - 1)) / n_passes
 
     # sCO2 arrow in...
-    ax[0].arrow(0, edge_pad + ele_ht / 2, dx=edge_pad, dy=0,
+    ax[0].arrow(0, ht - (edge_pad + ele_ht / 2), dx=edge_pad, dy=0,
                 length_includes_head=True,
                 width=lw,
                 head_width=lw*10,
@@ -59,7 +67,7 @@ def plot_2d_steady_state(data_file, n_passes=8, n_elements=7, show=False, image_
         arrow_x = edge_pad
         arrow_dx = -edge_pad
 
-    ax[0].arrow(arrow_x, ht - (edge_pad + ele_ht / 2), dx=arrow_dx, dy=0,
+    ax[0].arrow(arrow_x, edge_pad + ele_ht / 2, dx=arrow_dx, dy=0,
                 length_includes_head=True,
                 width=lw,
                 head_width=lw*10,
@@ -68,12 +76,12 @@ def plot_2d_steady_state(data_file, n_passes=8, n_elements=7, show=False, image_
     # Air side arrows...
     arrow_x = edge_pad + ele_wd / 2
     for i in range(n_elements):
-        ax[1].arrow(arrow_x, ht-edge_pad/2, dx=0, dy=-edge_pad/2,
+        ax[1].arrow(arrow_x, edge_pad, dx=0, dy=ht-3*edge_pad/2,
                     length_includes_head=True,
                     width=lw,
                     head_width=lw * 10,
                     color='k')
-        ax[1].arrow(arrow_x, ht-edge_pad, dx=0, dy=-(ht-3*edge_pad/2),
+        ax[1].arrow(arrow_x, edge_pad/2, dx=0, dy=edge_pad/2,
                     length_includes_head=True,
                     width=lw,
                     head_width=lw * 10,
@@ -135,8 +143,6 @@ def plot_2d_steady_state(data_file, n_passes=8, n_elements=7, show=False, image_
     cb = fig.colorbar(cm.ScalarMappable(norm=anorm, cmap=cmap), ax=ax, shrink=0.8)
     cb.set_label('Temperature (C)', rotation=270, labelpad=20)
 
-    #plt.subplots_adjust(top=0.95, right=0.95, left=0.12, bottom=0.05)
-    #fig.set_size_inches(8, 6)
     if image_file is not None:
         fig.savefig(image_file, dpi=500)
     if show:
