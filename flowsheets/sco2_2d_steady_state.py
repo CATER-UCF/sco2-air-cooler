@@ -1,7 +1,6 @@
 """
-...
+Runs a steady state simulation for several air temperatures.
 """
-import sys
 import pyomo.environ as pe
 from pyomo.network import Arc
 from idaes.core import FlowsheetBlock
@@ -14,22 +13,26 @@ from util import write_csv
 from models import HeatExchangerElement
 from flowsheets.code_gen import code_gen
 import numpy as np
-import argparse
 
-
-parser = argparse.ArgumentParser()
-parser.add_argument('-t', '--temperature', type=float, help='Shell inlet temperature')
-args = parser.parse_args()
-shell_inlet_temperature = args.temperature
 
 n_passes = 8
 n_elements_per_pass = 7
+
+# Calculate temperature ramps
+n_time_steps = 41
+start_time = 0
+end_time = 10
+start_temp = 273.15
+end_temp = 313.15
+
+time_set = list(np.linspace(start_time, end_time, n_time_steps))
+temp_set = list(np.linspace(start_temp, end_temp, n_time_steps))
 
 logger = idaes.logger.getLogger('idaes')
 logger.info('Creating model...')
 m = pe.ConcreteModel()
 m.fs = FlowsheetBlock(default={"dynamic": True,
-                               "time_set": [0, 1],
+                               "time_set": time_set,
                                "time_units": pe.units.s})
 
 m.fs.prop_sco2 = swco2.SWCO2ParameterBlock()
@@ -62,12 +65,11 @@ logger.info('Adding variables and constraints...')
 for e in all_elements:
     e.setup()
 
-
 logger.info('Applying time-discretization...')
 m.discretizer = pe.TransformationFactory('dae.finite_difference')
-m.discretizer.apply_to(m, nfe=1, wrt=m.fs.time, scheme="BACKWARD")
+m.discretizer.apply_to(m, nfe=n_time_steps-1, wrt=m.fs.time, scheme="BACKWARD")
 
-
+shell_inlet_temperature = 288.15
 shell_flow = 44004.14222
 tube_inlet_temperature = 384.35
 tube_inlet_pressure = 7653000
@@ -149,13 +151,22 @@ pe.TransformationFactory("network.expand_arcs").apply_to(m.fs)
 
 solver = pe.SolverFactory('ipopt')
 solver.options = {
-    "tol": 1e-6,
+    "tol": 1e-5,
     "linear_solver": "ma27",
-    "max_iter": 30,
+    "max_iter": 500,
 }
-logger.info('Solving model...')
+logger.info('Solving model with initial steady state conditions...')
+solver.solve(m, tee=True)
+
+# Adding temperature disturbances (DON'T add dynamic heat balance constraints)
+
+for idx, t in enumerate(m.fs.time):
+    for e in shell_in_elements:
+        e.shell_inlet.temperature[t].fix(temp_set[idx])
+
+logger.info('Solving model at different temperatures...')
 solver.solve(m, tee=True)
 
 logger.info('Writing results...')
-write_csv(f'./data/steady_state_temperature_{shell_inlet_temperature}.csv',
+write_csv(f'./data/steady_state_vs_temperature.csv',
           all_elements)

@@ -149,5 +149,5 @@ def plot_2d_steady_state(data_file, n_passes=8, n_elements=7, show=False, image_
         plt.show()
 
 
-plot_2d_steady_state('./data/combined.csv',
+plot_2d_steady_state('./data/steady_state_vs_temperature.csv',
                      image_file='./images/temperature_profile_2d.png', show=True)

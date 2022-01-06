@@ -31,6 +31,7 @@ python flowsheets/sco2_2d_steady_state.py
 python flowsheets/sco2_2d_step_changes.py
 python flowsheets/sco2_2d_ramp_up.py
 python flowsheets/sco2_2d_ramp_down.py
+python flowsheets/sco2_compressor_power.py
 ```
 Each simulation should take roughly thirty minutes to complete. Simulation results will be written to .csv files in the [data](./data) folder.
 
@@ -55,7 +56,7 @@ These correlations are only valid over a limited range of temperatures and press
 
 To update the simulations or run them for different boundary conditions or geometries, use the following procedure:
 
-* Update and generate data using [either]() of the surrogate [flowsheets]().
+* Update and generate data using [either](./flowsheets/sco2_shell_surrogate.py) of the surrogate [flowsheets](./flowsheets/sco2_tube_surrogate.py).
 * Create new correlations using the python files in [surrogates](./surrogates). Model selection can be aided with the MATLAB scripts in the same folder.
 * Update the [unit model](./models/heat_exchanger_element.py) with the results from the previous step.
 * Update the boundary conditions or geometry parameters on the main simulation [flowsheets](./flowsheets) and rerun.
@@ -66,7 +67,7 @@ For discussion, see the paper.
 
 ### Steady-State
 
-![](./images/temperature_profiles.png)
+![](./images/temperature_profiles1.png)
 
 ![](./images/temperature_profile_2d.png)
 

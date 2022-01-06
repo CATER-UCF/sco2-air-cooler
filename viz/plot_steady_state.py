@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 
 
-df = pd.read_csv('./data/combined.csv')
+df = pd.read_csv('./data/steady_state_vs_temperature.csv')
 
 # sCO2 exit temperature, density vs air temperature
 air_temp = df['temperature_shell_in_55'] - 273.15

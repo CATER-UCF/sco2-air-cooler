@@ -172,5 +172,5 @@ logger.info('Solving model with temperature ramp...')
 solver.solve(m, tee=True)
 
 logger.info('Writing results...')
-write_csv(f'./data/time_series_ramp_down_p{n_passes}_e{n_elements_per_pass}.csv',
+write_csv(f'./data/time_series_ramp_down.csv',
           all_elements)

@@ -58,7 +58,7 @@ for e in all_elements:
 
 logger.info('Applying time-discretization...')
 m.discretizer = pe.TransformationFactory('dae.finite_difference')
-m.discretizer.apply_to(m, nfe=200, wrt=m.fs.time, scheme="BACKWARD")
+m.discretizer.apply_to(m, nfe=100, wrt=m.fs.time, scheme="BACKWARD")
 
 shell_inlet_temperature = 288.15
 shell_flow = 44004.14222
@@ -168,5 +168,5 @@ logger.info('Solving model with temperature step change...')
 solver.solve(m, tee=True)
 
 logger.info('Writing results...')
-write_csv(f'./data/time_series_step_changes_p{n_passes}_e{n_elements_per_pass}.csv',
+write_csv(f'./data/time_series_step_changes.csv',
           all_elements)

@@ -7,14 +7,7 @@ from idaes.generic_models.unit_models import Compressor
 import pandas as pd
 
 
-df1 = pd.read_csv('./data/steady_state_vs_temperature_low.csv')
-df2 = pd.read_csv('./data/steady_state_vs_temperature_crit.csv')
-df3 = pd.read_csv('./data/steady_state_vs_temperature_high.csv')
-frames = [df1, df2, df3]
-
-df = pd.concat(frames, ignore_index=True)
-
-df = pd.read_csv('./data/combined.csv')
+df = pd.read_csv('./data/steady_state_vs_temperature.csv')
 
 temperatures = df['temperature_tube_out_55']
 pressures = df['pressure_tube_out_55']
@@ -57,4 +50,4 @@ solver.solve(m, tee=True)
 work = pe.value(m.fs.compressor.work_mechanical[:])
 df['compressor_power'] = np.array(work) * 1e-6
 
-df.to_csv('./data/combined.csv', index=None)
+df.to_csv('./data/steady_state_vs_temperature.csv', index=None)
